@@ -1,0 +1,86 @@
+---
+title: "EDA"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{EDA}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(brazildatamortality)
+```
+
+
+## Exploratory Data Analysis
+
+This is the EDA.
+
+
+```{r}
+
+library(read.dbc)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(lubridate)
+library(skimr)
+library(stringr)
+
+data_tb <- readRDS("/home/alber-d005/Documents/brazildatamortality/data_tb.rds")
+
+causabas_tb <- tibble::tribble(
+  ~cause, ~description,
+  "X30-X39", "Exposição às forças da natureza", 
+  "X30",     "Exposição a calor natural excessivo", 
+  "X31",     "Exposição a frio natural excessivo", 
+  "X32",     "Exposição à luz solar", 
+  "X33",     "Vítima de raio", 
+  "X34",     "Vítima de terremoto", 
+  "X35",     "Vítima de erupção vulcânica", 
+  "X36",     "Vítima de avalanche, desabamento de terra e outros movimentos da superfície terrestre", 
+  "X37",     "Vítima de tempestade cataclísmica", 
+  "X38",     "Vítima de inundação", 
+  "X39",     "Exposição a outras forças da natureza e às não especificadas" 
+)
+
+plot_data <- data_tb %>%
+  # Aggregate by year
+  dplyr::select(CAUSABAS, date) %>%
+  dplyr::mutate(death_year = lubridate::year(date),
+                cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
+  dplyr::group_by(cause, death_year) %>%
+  dplyr::summarize(fatalities = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(cause, death_year) %>%
+  dplyr::left_join(causabas_tb, by = "cause") %>%
+  dplyr::select(-cause)
+ 
+plot_data %>%
+  knitr::kable()
+ 
+plot_data %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year, 
+                               y = fatalities, 
+                               color = description,
+                               group = description)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Number of Fatalities")
+  
+
+
+```
+
+
+
