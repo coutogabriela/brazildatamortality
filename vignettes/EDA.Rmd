@@ -1,5 +1,5 @@
 ---
-title: "EDA"
+title: "Exploratory data analysis"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{EDA}
@@ -16,71 +16,198 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
-library(brazildatamortality)
-```
+```{r setup, include = FALSE}
 
-
-## Exploratory Data Analysis
-
-This is the EDA.
-
-
-```{r}
-
-library(read.dbc)
 library(dplyr)
 library(ggplot2)
 library(knitr)
 library(lubridate)
+library(magrittr)
+library(RcppRoll)
+library(read.dbc)
 library(skimr)
 library(stringr)
+library(tidyr)
 
-data_tb <- readRDS("/home/alber-d005/Documents/brazildatamortality/data_tb.rds")
+library(brazildatamortality)
+
+data_tb <- brazildatamortality::data_tb
 
 causabas_tb <- tibble::tribble(
-  ~cause, ~description,
-  "X30-X39", "Exposição às forças da natureza", 
-  "X30",     "Exposição a calor natural excessivo", 
-  "X31",     "Exposição a frio natural excessivo", 
-  "X32",     "Exposição à luz solar", 
-  "X33",     "Vítima de raio", 
-  "X34",     "Vítima de terremoto", 
-  "X35",     "Vítima de erupção vulcânica", 
-  "X36",     "Vítima de avalanche, desabamento de terra e outros movimentos da superfície terrestre", 
-  "X37",     "Vítima de tempestade cataclísmica", 
-  "X38",     "Vítima de inundação", 
-  "X39",     "Exposição a outras forças da natureza e às não especificadas" 
+  ~Cause, ~Description,
+  #"X30-X39", "Natural forces", #"Exposição às forças da natureza",
+  "X30",     "Heat",           #"Exposição a calor natural excessivo",
+  "X31",     "Cold",           #"Exposição a frio natural excessivo",
+  "X32",     "Sunlight",       #"Exposição à luz solar",
+  "X33",     "Lightning",      #"Vítima de raio",
+  "X34",     "Earthquake",     #"Vítima de terremoto",
+  "X35",     "Volcano",        #"Vítima de erupção vulcânica",
+  "X36",     "Landslide",      #"Vítima de avalanche, desabamento de terra e outros movimentos da superfície terrestre",
+  "X37",     "Tempest",        #"Vítima de tempestade cataclísmica",
+  "X38",     "Flood",          #, "Vítima de inundação",
+  "X39",     "Other",          #"Exposição a outras forças da natureza e às não especificadas"
 )
 
 plot_data <- data_tb %>%
-  # Aggregate by year
   dplyr::select(CAUSABAS, date) %>%
   dplyr::mutate(death_year = lubridate::year(date),
-                cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
-  dplyr::group_by(cause, death_year) %>%
-  dplyr::summarize(fatalities = n()) %>%
-  dplyr::ungroup() %>%
-  dplyr::arrange(cause, death_year) %>%
-  dplyr::left_join(causabas_tb, by = "cause") %>%
-  dplyr::select(-cause)
- 
+                Cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
+  dplyr::left_join(causabas_tb, by = "Cause")
+
+```
+
+## Abstract.
+
+This is the Exploratory Data Analysis.
+
+
+## Introduction.
+
+## Materials and methods.
+
+## Results.
+
+This is the list of causes of deaths by natural forces.
+
+```{r print_causes, echo=FALSE}
+
+knitr::kable(causabas_tb)
+
+```
+
+
+```{r plot_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
+
 plot_data %>%
-  knitr::kable()
- 
-plot_data %>%
-  ggplot2::ggplot(ggplot2::aes(x = death_year, 
-                               y = fatalities, 
-                               color = description,
-                               group = description)) +
+  dplyr::group_by(death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n(), 
+                   .groups = "drop") %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+  dplyr::arrange(death_year) %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = cumsum)) +
   ggplot2::geom_point() +
   ggplot2::geom_line() +
   ggplot2::xlab("Year") +
-  ggplot2::ylab("Number of Fatalities")
-  
+  ggplot2::ylab("Accumulated number of fatalities") +
+  ggplot2::ggtitle("Accumulated number of deaths by natural disasters")
 
+```
+
+
+```{r plot_total, echo=FALSE, fig.width = 7, fig.height = 5}
+
+plot_data %>%
+  dplyr::group_by(death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n(), 
+                   .groups = "drop") %>%
+  dplyr::mutate(moving_average = RcppRoll::roll_mean(fatalities, 
+                                                     n = 5, 
+                                                     align = "right", 
+                                                     fill = NA,
+                                                     na.rm = TRUE))  %>%
+  dplyr::arrange(death_year) %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = fatalities)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line(ggplot2::aes(x = death_year,
+                                  y = moving_average),
+                                  color = "blue") +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Total number of deaths by natural disasters")
+
+```
+
+
+```{r plot_causes, echo=FALSE, fig.width = 7, fig.height = 5}
+
+plot_data %>%
+  dplyr::group_by(Description, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n(), 
+                   .groups = "drop") %>%
+  dplyr::arrange(Description, death_year) %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = fatalities,
+                               color = Description,
+                               group = Description)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Death by cause")
+
+```
+
+```{r plot_causes_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
+
+plot_data %>%
+  dplyr::group_by(Description, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(Description, death_year) %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = cumsum,
+                               color = Description,
+                               group = Description)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Cumulative number of fatalities") +
+  ggplot2::ggtitle("Cumulative sum of deaths by cause")
+
+```
+
+```{r plot_by_cause, echo=FALSE, fig.width = 7, fig.height = 5}
+
+plot_data %>%
+  dplyr::group_by(death_year, Description) %>%
+  dplyr::summarize(fatalities = log(dplyr::n()),
+                   .groups = "drop") %>%
+  # NOTE: Util function for adding the roll means as a new column.
+  (function(x) {
+    my_data <- x %>%
+      dplyr::arrange(death_year, Description) %>%
+      tidyr::pivot_wider(id_cols = death_year,
+                         names_from = Description,
+                         values_from = fatalities)
+    my_roll <- RcppRoll::roll_mean(as.matrix(dplyr::select(my_data, 
+                                                           -death_year)),
+                                   n = 5,
+                                   align = "right",
+                                   fill = NA,
+                                   na.rm = TRUE) %>%
+      tibble::as_tibble() %>%
+      magrittr::set_names(paste(names(.), "roll_mean", sep = "_")) %>%
+      dplyr::mutate(death_year = my_data$death_year) %>%
+      tidyr::pivot_longer(!death_year) %>%
+      dplyr::rename(moving_average = value)
+   my_data %>%
+     tidyr::pivot_longer(!death_year,
+                         names_to = "Description",
+                         values_to = "fatalities") %>%
+     dplyr::bind_cols(dplyr::select(my_roll, moving_average)) %>%
+     return()
+  }) %>%
+  dplyr::arrange(death_year) %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = fatalities)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line(ggplot2::aes(x = death_year,
+                                  y = moving_average),
+                                  color = "blue") +
+  ggplot2::facet_wrap(~Description,
+                      ncol = 3) +
+  ggplot2::xlab("Year") +
+  ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggplot2::ylab("Logarithm of the number of fatalities") +
+  ggplot2::ggtitle("Number of deaths by natural disasters by cause")
 
 ```
 
 
 
+## Conclusions.
+
+## References.

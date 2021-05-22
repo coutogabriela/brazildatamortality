@@ -1,4 +1,4 @@
-# Take the original data and put it together into a single tibble
+# Take the original data (1996-2019) and put it together into a single tibble
 
 library(read.dbc)
 library(dplyr)
@@ -6,8 +6,9 @@ library(ggplot2)
 library(lubridate)
 library(skimr)
 library(stringr)
+library(usethis)
 
-# TODO: Gabriela actualiza para tu disco externo.
+# Path to a data directory.
 data_dir <- "~/Documents/brazildatamortality/inst/extdata/SIM"
 
 # Helper function. Read and format the raw data.
@@ -23,11 +24,9 @@ process_data <- function(x) {
 }
 
 raw_data_tb <- data_dir %>%
-  list.files(pattern = ".*[.]dbc",
+  list.files(pattern = ".*[.](dbc|DBC)",
              full.names = TRUE,
              recursive = TRUE) %>%
-  # TODO: Remove this line.
-  #head(3) %>%
   tibble::tibble() %>%
   dplyr::rename(file_path = ".") %>%
   dplyr::mutate(data = purrr::map(file_path, process_data))
@@ -35,6 +34,4 @@ raw_data_tb <- data_dir %>%
 data_tb <- raw_data_tb %>%
   tidyr::unnest(data)
 
-# TODO: Gabriela actualiza para tu computadora.
-data_tb %>%
-  saveRDS("/home/alber-d005/Documents/brazildatamortality/data_tb.rds")
+usethis::use_data(data_tb)
