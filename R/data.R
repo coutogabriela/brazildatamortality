@@ -1,4 +1,4 @@
-#' Deaths due to natural disaster in Brazil.
+#' Deaths due to natural disaster in Brazil from 1996 to 2019.
 #'
 #' A dataset containing information regarding deaths in Brazil due to natural
 #' disasters from 1996 to 2019.
@@ -6,7 +6,7 @@
 #'
 #' @format A data frame with 5862 rows and 105 variables:
 #' \describe{
-#' \item{file_path}{TODO: Add description}
+#' \item{file_path}{Path to the file from which the data is comming from.}
 #' \item{NUMERODO}{TODO: Add description}
 #' \item{TIPOBITO}{TODO: Add description}
 #' \item{DTOBITO}{TODO: Add description}
@@ -113,4 +113,4 @@
 #' \item{CONTADOR}{TODO: Add description}
 #' }
 #' @source \url{http://www.TODO_update_url.info/}
-"data_tb"
+"data_icd_10"

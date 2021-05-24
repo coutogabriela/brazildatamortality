@@ -31,7 +31,7 @@ library(tidyr)
 
 library(brazildatamortality)
 
-data_tb <- brazildatamortality::data_tb
+data_tb <- brazildatamortality::data_icd_10
 
 causabas_tb <- tibble::tribble(
   ~Cause, ~Description,
