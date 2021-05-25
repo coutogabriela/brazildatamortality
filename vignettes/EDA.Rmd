@@ -34,7 +34,8 @@ library(brazildatamortality)
 data_tb <- brazildatamortality::data_icd_10
 
 causabas_tb <- tibble::tribble(
-  ~Cause, ~Description,
+  #~Cause, ~Description,
+  ~code_cause, ~Cause,
   #"X30-X39", "Natural forces", #"Exposição às forças da natureza",
   "X30",     "Heat",           #"Exposição a calor natural excessivo",
   "X31",     "Cold",           #"Exposição a frio natural excessivo",
@@ -48,11 +49,20 @@ causabas_tb <- tibble::tribble(
   "X39",     "Other",          #"Exposição a outras forças da natureza e às não especificadas"
 )
 
+sexo_tb <- tibble::tribble(
+  ~code_sex, ~Sexo, 
+  "0",      "No information",
+  "1",      "Male",
+  "2",      "Female",
+  "9",      "TODO"
+)
+
+
 plot_data <- data_tb %>%
   dplyr::select(CAUSABAS, date) %>%
   dplyr::mutate(death_year = lubridate::year(date),
-                Cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
-  dplyr::left_join(causabas_tb, by = "Cause")
+                code_cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
+  dplyr::left_join(causabas_tb, by = "code_cause")
 
 ```
 
@@ -66,15 +76,6 @@ This is the Exploratory Data Analysis.
 ## Materials and methods.
 
 ## Results.
-
-This is the list of causes of deaths by natural forces.
-
-```{r print_causes, echo=FALSE}
-
-knitr::kable(causabas_tb)
-
-```
-
 
 ```{r plot_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
 
@@ -123,14 +124,14 @@ plot_data %>%
 ```{r plot_causes, echo=FALSE, fig.width = 7, fig.height = 5}
 
 plot_data %>%
-  dplyr::group_by(Description, death_year) %>%
+  dplyr::group_by(Cause, death_year) %>%
   dplyr::summarize(fatalities = dplyr::n(), 
                    .groups = "drop") %>%
-  dplyr::arrange(Description, death_year) %>%
+  dplyr::arrange(Cause, death_year) %>%
   ggplot2::ggplot(ggplot2::aes(x = death_year,
                                y = fatalities,
-                               color = Description,
-                               group = Description)) +
+                               color = Cause,
+                               group = Cause)) +
   ggplot2::geom_point() +
   ggplot2::geom_line() +
   ggplot2::xlab("Year") +
@@ -142,15 +143,15 @@ plot_data %>%
 ```{r plot_causes_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
 
 plot_data %>%
-  dplyr::group_by(Description, death_year) %>%
+  dplyr::group_by(Cause, death_year) %>%
   dplyr::summarize(fatalities = dplyr::n()) %>%
   dplyr::mutate(cumsum = cumsum(fatalities)) %>%
   dplyr::ungroup() %>%
-  dplyr::arrange(Description, death_year) %>%
+  dplyr::arrange(Cause, death_year) %>%
   ggplot2::ggplot(ggplot2::aes(x = death_year,
                                y = cumsum,
-                               color = Description,
-                               group = Description)) +
+                               color = Cause,
+                               group = Cause)) +
   ggplot2::geom_point() +
   ggplot2::geom_line() +
   ggplot2::xlab("Year") +
@@ -164,21 +165,22 @@ plot_data %>%
 
 data_tb %>%
   dplyr::mutate(death_year = lubridate::year(date),
-                Cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
-  dplyr::left_join(causabas_tb, by = "Cause") %>%
-  dplyr::filter(SEXO %in% 1:2) %>%
-  dplyr::group_by(SEXO, Description, death_year) %>%
-  dplyr::arrange(SEXO, Description, death_year) %>%
+                code_cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
+  dplyr::left_join(causabas_tb, by = "code_cause") %>%
+  dplyr::left_join(sexo_tb, by = c("SEXO" = "code_sex")) %>%
+  dplyr::filter(Sexo %in% c("Male", "Female")) %>%
+  dplyr::group_by(Sexo, Cause, death_year) %>%
+  dplyr::arrange(Sexo, Cause, death_year) %>%
   dplyr::summarize(fatalities = dplyr::n()) %>%
   dplyr::mutate(cumsum = cumsum(fatalities)) %>%
   dplyr::ungroup() %>%
   ggplot2::ggplot(ggplot2::aes(x = death_year,
                                y = cumsum,
-                               color = Description,
-                               group = Description)) +
+                               color = Cause,
+                               group = Cause)) +
   ggplot2::geom_point() +
   ggplot2::geom_line() +
-  ggplot2::facet_wrap(~SEXO) +
+  ggplot2::facet_wrap(~Sexo) +
   ggplot2::xlab("Year") +
   ggplot2::ylab("Cumulative number of fatalities by sex") +
   ggplot2::ggtitle("Cumulative sum of deaths by cause and sex")
@@ -189,15 +191,15 @@ data_tb %>%
 ```{r plot_by_cause, echo=FALSE, fig.width = 7, fig.height = 5}
 
 plot_data %>%
-  dplyr::group_by(death_year, Description) %>%
+  dplyr::group_by(death_year, Cause) %>%
   dplyr::summarize(fatalities = log(dplyr::n()),
                    .groups = "drop") %>%
   # NOTE: Util function for adding the roll means as a new column.
   (function(x) {
     my_data <- x %>%
-      dplyr::arrange(death_year, Description) %>%
+      dplyr::arrange(death_year, Cause) %>%
       tidyr::pivot_wider(id_cols = death_year,
-                         names_from = Description,
+                         names_from = Cause,
                          values_from = fatalities)
     my_roll <- RcppRoll::roll_mean(as.matrix(dplyr::select(my_data, 
                                                            -death_year)),
@@ -212,7 +214,7 @@ plot_data %>%
       dplyr::rename(moving_average = value)
    my_data %>%
      tidyr::pivot_longer(!death_year,
-                         names_to = "Description",
+                         names_to = "Cause",
                          values_to = "fatalities") %>%
      dplyr::bind_cols(dplyr::select(my_roll, moving_average)) %>%
      return()
@@ -224,7 +226,7 @@ plot_data %>%
   ggplot2::geom_line(ggplot2::aes(x = death_year,
                                   y = moving_average),
                                   color = "blue") +
-  ggplot2::facet_wrap(~Description,
+  ggplot2::facet_wrap(~Cause,
                       ncol = 3) +
   ggplot2::xlab("Year") +
   ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
