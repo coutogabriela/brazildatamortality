@@ -57,12 +57,24 @@ sexo_tb <- tibble::tribble(
   "9",      "TODO"
 )
 
+esc_tb <- tibble::tribble(
+  ~code_esc, ~Education,
+  "0", "Sem escolaridade",
+  "1", "Fundamental I", # (1ª a 4ª série)",
+  "2", "Fundamental II", # (5ª a 8ª série)",
+  "3", "Médio", # (antigo 2º Grau)",
+  "4", "Superior incompleto",
+  "5", "Superior completo",
+  "9", "Ignorado"
+)
 
 plot_data <- data_tb %>%
-  dplyr::select(CAUSABAS, date) %>%
+  dplyr::select(CAUSABAS, SEXO, ESC, date) %>%
   dplyr::mutate(death_year = lubridate::year(date),
                 code_cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
-  dplyr::left_join(causabas_tb, by = "code_cause")
+  dplyr::left_join(causabas_tb, by = "code_cause") %>%
+  dplyr::left_join(sexo_tb, by = c("SEXO" = "code_sex")) %>%
+  dplyr::left_join(esc_tb,  by = c("ESC" = "code_esc"))
 
 ```
 
@@ -186,6 +198,38 @@ data_tb %>%
   ggplot2::ggtitle("Cumulative sum of deaths by cause and sex")
 
 ```
+
+
+```{r plot_causes_esc_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
+
+plot_data %>%
+  dplyr::mutate(Education = as.factor(Education),
+                Cause     = as.factor(Cause)) %>%
+  dplyr::group_by(Education, Cause, death_year) %>%
+  dplyr::arrange(Education, Cause, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+  dplyr::ungroup() %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = cumsum,
+                               color = Cause,
+                               group = Cause)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  #ggplot2::scale_color_brewer(palette = "Spectral") + 
+  #ggplot2::scale_colour_viridis_d(option = "plasma") +
+  ggplot2::facet_wrap(~Education) +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Cumulative number of fatalities by education") +
+  ggplot2::ggtitle("Cumulative sum of deaths by cause and education")
+
+```
+
+
+
+
+
+
 
 
 ```{r plot_by_cause, echo=FALSE, fig.width = 7, fig.height = 5}
