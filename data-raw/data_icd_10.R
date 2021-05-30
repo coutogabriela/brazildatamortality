@@ -1,6 +1,8 @@
 ## Code to prepare `data_icd_10` dataset.
 
 library(dplyr)
+library(furrr)
+library(future)
 library(ggplot2)
 library(lubridate)
 library(purrr)
@@ -18,7 +20,7 @@ data_dir <- "~/Documents/github/brazildatamortality/inst/extdata/SIM"
 
 #---- Helper functions ----
 
-# Helper function. Read and format the raw data.
+# Helper function. Read, filter, and format a file of raw data.
 #
 # @param x A quosure that reads a file into a data.frame.
 # @return  A tibble.
@@ -28,13 +30,16 @@ process_data <- function(x) {
     tibble::as_tibble() %>%
     # NOTE: Filter deaths by natural causes.
     dplyr::filter(stringr::str_detect(CAUSABAS, "X3")) %>%
-    dplyr::mutate(date = lubridate::as_date(DTOBITO,
-                                            format = "%d%m%Y")) %>%
     return()
 }
 
-#---- Script ----
 
+
+#---- Read data ----
+
+# Check https://www.brodrigues.co/blog/2021-03-19-no_loops_tidyeval/
+future::plan(multisession,
+             workers = future::availableCores())
 raw_data_tb <- data_dir %>%
   list.files(pattern = ".*[.](dbc|DBC)",
              full.names = TRUE,
@@ -44,10 +49,49 @@ raw_data_tb <- data_dir %>%
   dplyr::mutate(raw_data = purrr::map(file_path,
                             ~rlang::quo(read.dbc::read.dbc(.,
                                                            as.is = TRUE)))) %>%
-  dplyr::mutate(data = purrr::map(raw_data, process_data))
+  dplyr::mutate(data = furrr::future_map(raw_data, process_data))
+
+
+
+#---- Recode variables ----
 
 data_icd_10 <- raw_data_tb %>%
-  tidyr::unnest(data)
+  tidyr::unnest(data) %>%
+  dplyr::mutate(date = lubridate::as_date(DTOBITO, format = "%d%m%Y"),
+                death_year = lubridate::year(date),
+                code_cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
+  dplyr::mutate(Cause = dplyr::recode(code_cause,
+                                      # TODO: Check names.
+                                      "X30" = "Heat",       #"Exposição a calor natural excessivo",
+                                      "X31" = "Cold",       #"Exposição a frio natural excessivo",
+                                      "X32" = "Sunlight",   #"Exposição à luz solar",
+                                      "X33" = "Lightning",  #"Vítima de raio",
+                                      "X34" = "Earthquake", #"Vítima de terremoto",
+                                      "X35" = "Volcano",    #"Vítima de erupção vulcânica",
+                                      "X36" = "Landslide",  #"Vítima de avalanche, desabamento de terra e outros movimentos da superfície terrestre",
+                                      "X37" = "Tempest",    #"Vítima de tempestade cataclísmica",
+                                      "X38" = "Flood",      #"Vítima de inundação",
+                                      "X39" = "Other",      #"Exposição a outras forças da natureza e às não especificadas"
+                                      .default = NA_character_),
+                Sex = dplyr::recode(SEXO,
+                # TODO: What is code 9?
+                                    "0" = "No information",
+                                    "1" = "Male",
+                                    "2" = "Female",
+                                    "9" = "TODO",
+                                    .default = NA_character_),
+                Education = dplyr::recode(ESC,
+                # TODO: Check against https://en.wikipedia.org/wiki/International_Standard_Classification_of_Education
+                                          "0" = "None",                  # "Sem escolaridade",
+                                          "1" = "Primary",               # "Fundamental I (1ª a 4ª série)",
+                                          "2" = "Lower secondary",       # "Fundamental II (5ª a 8ª série)",
+                                          "3" = "Upper secondary",       # "Médio (antigo 2º Grau)",
+                                          "4" = "Bachelor (incomplete)", # "Superior incompleto",
+                                          "5" = "Bachelor",              # "Superior completo",
+                                          "9" = "Ignored",               # "Ignorado",
+                                          .default = NA_character_)) %>%
+  # TODO: Remove all the unused variables.
+  dplyr::select(-DTOBITO, -CAUSABAS, -SEXO, -ESC, -date)
 
 usethis::use_data(data_icd_10,
                   overwrite = TRUE)
