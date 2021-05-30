@@ -3,7 +3,9 @@
 library(dplyr)
 library(ggplot2)
 library(lubridate)
+library(purrr)
 library(read.dbc)
+library(rlang)
 library(skimr)
 library(stringr)
 library(usethis)
@@ -11,15 +13,18 @@ library(usethis)
 # Path to a data directory of mortality data from:
 # Ministerio da saude do Brasil.
 # Sistema de Informação sobre Mortalidade (SIM).
-data_dir <- "~/Documents/brazildatamortality/inst/extdata/SIM"
+data_dir <- "~/Documents/github/brazildatamortality/inst/extdata/SIM"
 
 
 #---- Helper functions ----
 
 # Helper function. Read and format the raw data.
+#
+# @param x A quosure that reads a file into a data.frame.
+# @return  A tibble.
 process_data <- function(x) {
+  x <- rlang::eval_tidy(x)
   x %>%
-    read.dbc::read.dbc(as.is = TRUE) %>%
     tibble::as_tibble() %>%
     # NOTE: Filter deaths by natural causes.
     dplyr::filter(stringr::str_detect(CAUSABAS, "X3")) %>%
@@ -36,7 +41,10 @@ raw_data_tb <- data_dir %>%
              recursive = TRUE) %>%
   tibble::tibble() %>%
   dplyr::rename(file_path = ".") %>%
-  dplyr::mutate(data = purrr::map(file_path, process_data))
+  dplyr::mutate(raw_data = purrr::map(file_path,
+                            ~rlang::quo(read.dbc::read.dbc(.,
+                                                           as.is = TRUE)))) %>%
+  dplyr::mutate(data = purrr::map(raw_data, process_data))
 
 data_icd_10 <- raw_data_tb %>%
   tidyr::unnest(data)
