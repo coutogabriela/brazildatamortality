@@ -73,11 +73,9 @@ data_icd_10 <- raw_data_tb %>%
                                       "X39" = "Other",      #"Exposição a outras forças da natureza e às não especificadas"
                                       .default = NA_character_),
                 Sex = dplyr::recode(SEXO,
-                                    # TODO: What is code 9?
                                     "0" = "No information",
                                     "1" = "Male",
                                     "2" = "Female",
-                                    "9" = "TODO",
                                     .default = NA_character_),
                 Education = dplyr::recode(ESC,
                                           # TODO: Check against https://en.wikipedia.org/wiki/International_Standard_Classification_of_Education

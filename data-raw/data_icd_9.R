@@ -29,7 +29,7 @@ process_data <- function(x) {
   x %>%
     tibble::as_tibble() %>%
     # NOTE: Filter deaths by natural causes.
-    dplyr::filter(CAUSABAS %in% c("907X", "908X", "909X")) %>%
+    dplyr::filter(stringr::str_detect(CAUSABAS, "^(900|901|907|908|909)")) %>%
     return()
 }
 
@@ -55,11 +55,12 @@ raw_data_tb <- data_dir %>%
 
 # #---- Recode variables ----
 #
-data_icd_9 <- raw_data_tb #%>%
-#   tidyr::unnest(data) %>%
-#   dplyr::mutate(date = lubridate::as_date(DTOBITO, format = "%d%m%Y"),
-#                 death_year = lubridate::year(date),
-#                 code_cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
+data_icd_9 <- raw_data_tb %>%
+  dplyr::select(-raw_data) %>%
+  tidyr::unnest(data) %>%
+  dplyr::mutate(date = lubridate::as_date(DATAOBITO, format = "%y%m%d%"),
+                death_year = lubridate::year(date),
+                code_cause = stringr::str_sub(CAUSABAS, 1, 3)) #%>%
 #   dplyr::mutate(Cause = dplyr::recode(code_cause,
 #                                       # TODO: Check names.
 #                                       "X30" = "Heat",       #"Exposição a calor natural excessivo",
