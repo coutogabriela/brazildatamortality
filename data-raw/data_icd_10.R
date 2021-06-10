@@ -61,7 +61,6 @@ data_icd_10 <- raw_data_tb %>%
                 death_year = lubridate::year(date),
                 code_cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
   dplyr::mutate(Cause = dplyr::recode(code_cause,
-                                      # TODO: Check names.
                                       "X30" = "Heat",       #"Exposição a calor natural excessivo",
                                       "X31" = "Cold",       #"Exposição a frio natural excessivo",
                                       "X32" = "Sunlight",   #"Exposição à luz solar",
@@ -74,14 +73,14 @@ data_icd_10 <- raw_data_tb %>%
                                       "X39" = "Other",      #"Exposição a outras forças da natureza e às não especificadas"
                                       .default = NA_character_),
                 Sex = dplyr::recode(SEXO,
-                # TODO: What is code 9?
+                                    # TODO: What is code 9?
                                     "0" = "No information",
                                     "1" = "Male",
                                     "2" = "Female",
                                     "9" = "TODO",
                                     .default = NA_character_),
                 Education = dplyr::recode(ESC,
-                # TODO: Check against https://en.wikipedia.org/wiki/International_Standard_Classification_of_Education
+                                          # TODO: Check against https://en.wikipedia.org/wiki/International_Standard_Classification_of_Education
                                           "0" = "None",                  # "Sem escolaridade",
                                           "1" = "Primary",               # "Fundamental I (1ª a 4ª série)",
                                           "2" = "Lower secondary",       # "Fundamental II (5ª a 8ª série)",
@@ -90,8 +89,34 @@ data_icd_10 <- raw_data_tb %>%
                                           "5" = "Bachelor",              # "Superior completo",
                                           "9" = "Ignored",               # "Ignorado",
                                           .default = NA_character_)) %>%
-  # TODO: Remove all the unused variables.
-  dplyr::select(-DTOBITO, -CAUSABAS, -SEXO, -ESC, -date)
+  # Remove the unused variables.
+  # TODO: Rename these variables to English.
+  dplyr::select(Cause, Sex, Education, death_year,
+                code_cause,
+                file_path,
+                NUMERODO,
+                TIPOBITO,
+                DTOBITO,
+                NATURAL,
+                DTNASC,
+                IDADE,
+                SEXO,
+                RACACOR,
+                ESTCIV,
+                ESC,
+                OCUP,
+                # TODO: What is this variable? Why is not in the raw data?
+                #CODBAIRES,
+                CODMUNRES,
+                LOCOCOR,
+                CODMUNOCOR,
+                IDADEMAE,
+                ESCMAE,
+                OCUPMAE,
+                QTDFILVIVO,
+                CAUSABAS,
+                FONTE,
+                CAUSABAS_O)
 
 usethis::use_data(data_icd_10,
                   overwrite = TRUE)
