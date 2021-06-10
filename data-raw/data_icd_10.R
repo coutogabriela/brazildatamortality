@@ -15,7 +15,7 @@ library(usethis)
 # Path to a data directory of mortality data from:
 # Ministerio da saude do Brasil.
 # Sistema de Informação sobre Mortalidade (SIM).
-data_dir <- "~/Documents/github/brazildatamortality/inst/extdata/SIM"
+data_dir <- "~/Documents/github/brazildatamortality/inst/extdata/SIM/DADOS_CID10"
 
 
 #---- Helper functions ----
