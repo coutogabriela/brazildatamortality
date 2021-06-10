@@ -1,3 +1,4 @@
+
 ---
 title: "Exploratory data analysis"
 output: rmarkdown::html_vignette
@@ -21,17 +22,67 @@ knitr::opts_chunk$set(
 library(dplyr)
 library(ggplot2)
 library(knitr)
+library(lubridate)
+library(magrittr)
+library(RcppRoll)
+library(read.dbc)
 library(skimr)
 library(stringr)
 library(tidyr)
 
 library(brazildatamortality)
 
-plot_data <- brazildatamortality::data_icd_10
+data_tb <- brazildatamortality::data_icd_10
+
+causabas_tb <- tibble::tribble(
+  #~Cause, ~Description,
+  ~code_cause, ~Cause,
+  #"X30-X39", "Natural forces", #"Exposição às forças da natureza",
+  "X30",     "Heat",           #"Exposição a calor natural excessivo",
+  "X31",     "Cold",           #"Exposição a frio natural excessivo",
+  "X32",     "Sunlight",       #"Exposição à luz solar",
+  "X33",     "Lightning",      #"Vítima de raio",
+  "X34",     "Earthquake",     #"Vítima de terremoto",
+  "X35",     "Volcano",        #"Vítima de erupção vulcânica",
+  "X36",     "Landslide",      #"Vítima de avalanche, desabamento de terra e outros movimentos da superfície terrestre",
+  "X37",     "Cataclysmic",        #"Vítima de tempestade cataclísmica",
+  "X38",     "Flood",          #, "Vítima de inundação",
+  "X39",     "Other",          #"Exposição a outras forças da natureza e às não especificadas"
+)
+
+sexo_tb <- tibble::tribble(
+  ~code_sex, ~Sexo, 
+  "0",      "No information",
+  "1",      "Male",
+  "2",      "Female",
+  "9",      "TODO"
+)
+
+esc_tb <- tibble::tribble(
+  ~code_esc, ~Education,
+  "0", "Sem escolaridade",
+  "1", "Fundamental I", # (1ª a 4ª série)",
+  "2", "Fundamental II", # (5ª a 8ª série)",
+  "3", "Médio", # (antigo 2º Grau)",
+  "4", "Superior incompleto",
+  "5", "Superior completo",
+  "9", "Ignorado"
+)
+
+plot_data <- data_tb %>%
+  dplyr::select(CAUSABAS, SEXO, ESC, date) %>%
+  dplyr::mutate(death_year = lubridate::year(date),
+                code_cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
+  dplyr::left_join(causabas_tb, by = "code_cause") %>%
+  dplyr::left_join(sexo_tb, by = c("SEXO" = "code_sex")) %>%
+  dplyr::left_join(esc_tb,  by = c("ESC" = "code_esc"))
 
 ```
 
 ## Abstract.
+
+This is the Exploratory Data Analysis.
+
 
 ## Introduction.
 
@@ -53,7 +104,7 @@ plot_data %>%
   ggplot2::geom_line() +
   ggplot2::xlab("Year") +
   ggplot2::ylab("Accumulated number of fatalities") +
-  ggplot2::ggtitle("Accumulated number of deaths by natural disasters")
+  ggplot2::ggtitle("Accumulated number of deaths by forces of nature")
 
 ```
 
@@ -78,7 +129,7 @@ plot_data %>%
                                   color = "blue") +
   ggplot2::xlab("Year") +
   ggplot2::ylab("Number of fatalities") +
-  ggplot2::ggtitle("Total number of deaths by natural disasters")
+  ggplot2::ggtitle("Total number of deaths by forces of nature")
 
 ```
 
@@ -125,10 +176,14 @@ plot_data %>%
 
 ```{r plot_causes_sex_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
 
-plot_data %>%
-  dplyr::filter(Sex %in% c("Male", "Female")) %>%
-  dplyr::group_by(Sex, Cause, death_year) %>%
-  dplyr::arrange(Sex, Cause, death_year) %>%
+data_tb %>%
+  dplyr::mutate(death_year = lubridate::year(date),
+                code_cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
+  dplyr::left_join(causabas_tb, by = "code_cause") %>%
+  dplyr::left_join(sexo_tb, by = c("SEXO" = "code_sex")) %>%
+  dplyr::filter(Sexo %in% c("Male", "Female")) %>%
+  dplyr::group_by(Sexo, Cause, death_year) %>%
+  dplyr::arrange(Sexo, Cause, death_year) %>%
   dplyr::summarize(fatalities = dplyr::n()) %>%
   dplyr::mutate(cumsum = cumsum(fatalities)) %>%
   dplyr::ungroup() %>%
@@ -138,7 +193,7 @@ plot_data %>%
                                group = Cause)) +
   ggplot2::geom_point() +
   ggplot2::geom_line() +
-  ggplot2::facet_wrap(~Sex) +
+  ggplot2::facet_wrap(~Sexo) +
   ggplot2::xlab("Year") +
   ggplot2::ylab("Cumulative number of fatalities by sex") +
   ggplot2::ggtitle("Cumulative sum of deaths by cause and sex")
@@ -170,6 +225,12 @@ plot_data %>%
   ggplot2::ggtitle("Cumulative sum of deaths by cause and education")
 
 ```
+
+
+
+
+
+
 
 
 ```{r plot_by_cause, echo=FALSE, fig.width = 7, fig.height = 5}
@@ -218,6 +279,8 @@ plot_data %>%
   ggplot2::ggtitle("Number of deaths by natural disasters by cause")
 
 ```
+
+
 
 ## Conclusions.
 
