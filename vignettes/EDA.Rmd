@@ -97,11 +97,20 @@ data_9  <- data_9  %>%
   dplyr::select(birth_date, cause, death_city, death_date, education, 
                 job, locus, marital, residence_city, sex)
 
-plot_data <- data_9 %>%
+data_tb <- data_9 %>%
   dplyr::bind_rows(data_10) %>%
   dplyr::mutate(death_year = lubridate::year(death_date),
                 computed_age = difftime(death_date, birth_date, units = "days"),
-                death_month = lubridate::month(death_date))
+                death_month = lubridate::month(death_date)) %>%
+  tidyr::drop_na(cause, death_date)
+
+outlier_data <- data_tb %>%
+  dplyr::filter(death_date > as.Date("2011-01-10"),
+                death_date < as.Date("2011-01-13"))
+
+regular_data <- data_tb %>%
+  dplyr::filter(death_date < as.Date("2011-01-11") | 
+                death_date > as.Date("2011-01-12"))
 
 ```
 
@@ -118,7 +127,7 @@ plot_data <- data_9 %>%
 ```{r plot_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
 
 
-plot_data %>%
+regular_data %>%
   dplyr::group_by(death_year) %>%
   dplyr::summarize(fatalities = dplyr::n(), 
                    .groups = "drop") %>%
@@ -132,12 +141,13 @@ plot_data %>%
   ggplot2::ylab("Accumulated number of fatalities") +
   ggplot2::ggtitle("Accumulated number of deaths by forces of nature")
 
+
 ```
 
 
 ```{r plot_total, echo=FALSE, fig.width = 7, fig.height = 5}
 
-plot_data %>%
+regular_data %>%
   dplyr::group_by(death_year) %>%
   dplyr::summarize(fatalities = dplyr::n(), 
                    .groups = "drop") %>%
@@ -162,26 +172,29 @@ plot_data %>%
 
 ```{r plot_causes, echo=FALSE, fig.width = 7, fig.height = 5}
 
-plot_data %>%
+regular_data %>%
   dplyr::group_by(cause, death_year) %>%
   dplyr::summarize(fatalities = dplyr::n(), 
                    .groups = "drop") %>%
   dplyr::arrange(cause, death_year) %>%
+  dplyr::filter(!is.na(cause), !is.na(death_year)) %>%
   ggplot2::ggplot(ggplot2::aes(x = death_year,
                                y = fatalities,
                                color = cause,
                                group = cause)) +
   ggplot2::geom_point() +
   ggplot2::geom_line() +
+  #ggplot2::ylim(0, 50) +
   ggplot2::xlab("Year") +
   ggplot2::ylab("Number of fatalities") +
-  ggplot2::ggtitle("Death by cause")
+  ggplot2::ggtitle("Death by cause") + 
+  ggplot2::scale_color_brewer(palette = "Paired")
 
 ```
 
 ```{r plot_causes_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
 
-plot_data %>%
+regular_data %>%
   dplyr::group_by(cause, death_year) %>%
   dplyr::summarize(fatalities = dplyr::n()) %>%
   dplyr::mutate(cumsum = cumsum(fatalities)) %>%
@@ -202,7 +215,7 @@ plot_data %>%
 
 ```{r plot_causes_sex_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
 
-plot_data %>%
+regular_data %>%
   dplyr::filter(sex %in% c("Male", "Female")) %>%
   dplyr::group_by(sex, cause, death_year) %>%
   dplyr::arrange(sex, cause, death_year) %>%
@@ -225,7 +238,7 @@ plot_data %>%
 
 ```{r plot_causes_esc_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
 
-plot_data %>%
+regular_data %>%
   dplyr::mutate(education = as.factor(education),
                 cause     = as.factor(cause)) %>%
   dplyr::group_by(education, cause, death_year) %>%
@@ -251,7 +264,7 @@ plot_data %>%
 
 ```{r plot_by_cause, echo=FALSE, fig.width = 7, fig.height = 5}
 
-plot_data %>%
+regular_data %>%
   dplyr::group_by(death_year, cause) %>%
   dplyr::summarize(fatalities = log(dplyr::n()),
                    .groups = "drop") %>%
