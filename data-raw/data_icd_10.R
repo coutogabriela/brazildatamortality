@@ -123,7 +123,7 @@ data_icd_10 <- raw_data_tb %>%
                                              .default = NA_character_)) %>%
     dplyr::select(birth_date,
                   cause,
-                  city = CODMUNRES,
+                  residence_city = CODMUNRES,
                   color_race,
                   death_city = CODMUNOCOR,
                   death_date,

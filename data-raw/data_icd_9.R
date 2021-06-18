@@ -100,7 +100,7 @@ data_icd_9 <- raw_data_tb %>%
                                         "4" = "Other",
                                         .default = NA_character_),
                   # TODO: Review using the international reference https://en.wikipedia.org/wiki/International_Standard_Classification_of_Education#ISCED_2011_levels_of_education_and_comparison_with_ISCED_1997
-                  literacy = dplyr::recode(INSTRUCAO,
+                  education = dplyr::recode(INSTRUCAO,
                                            "O" = "Ignored",
                                            "1" = "None",
                                            "2" = "Primary",
@@ -110,13 +110,13 @@ data_icd_9 <- raw_data_tb %>%
 
     dplyr::select(birth_date,
                   cause,
-                  city = MUNIRES,
+                  residence_city = MUNIRES,
                   #
                   death_city = MUNIOCOR,
                   death_date,
-                  #
+                  education,
                   job = OCUPACAO,
-                  literacy,
+                  #
                   locus,
                   marital,
                   sex)
