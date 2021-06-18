@@ -63,7 +63,6 @@ data_icd_10 <- raw_data_tb %>%
     tidyr::unnest(data) %>%
     dplyr::mutate(death_date = lubridate::as_date(DTOBITO, format = "%d%m%Y"),
                   birth_date = lubridate::as_date(DTNASC, format = "%d%m%Y"),
-                  death_year = lubridate::year(death_date),
                   code_cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
     dplyr::mutate(cause = dplyr::recode(code_cause,
                                         "X30" = "Heat",
@@ -122,17 +121,18 @@ data_icd_10 <- raw_data_tb %>%
                                              "4" = "Mixed",
                                              "5" = "Indigenous",
                                              .default = NA_character_)) %>%
-    dplyr::select(cause,
-                  sex,
-                  education,
-                  literacy,
-                  death_year,
-                  marital,
-                  locus,
-                  color_race,
-                  job = OCUP,
+    dplyr::select(birth_date,
+                  cause,
                   city = CODMUNRES,
-                  death_city = CODMUNOCOR)
+                  color_race,
+                  death_city = CODMUNOCOR,
+                  death_date,
+                  education,
+                  job = OCUP,
+                  literacy,
+                  locus,
+                  marital,
+                  sex)
 
     usethis::use_data(data_icd_10,
                       overwrite = TRUE)

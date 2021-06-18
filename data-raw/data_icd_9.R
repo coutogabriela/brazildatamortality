@@ -108,16 +108,18 @@ data_icd_9 <- raw_data_tb %>%
                                            "4" = "Barchelor",
                                            .default = NA_character_)) %>%
 
-    dplyr::select(death_date,
-                  birth_date,
+    dplyr::select(birth_date,
                   cause,
-                  sex,
-                  literacy,
-                  marital,
-                  locus,
-                  job = OCUPACAO,
                   city = MUNIRES,
-                  death_city = MUNIOCOR)
+                  #
+                  death_city = MUNIOCOR,
+                  death_date,
+                  #
+                  job = OCUPACAO,
+                  literacy,
+                  locus,
+                  marital,
+                  sex)
 
 usethis::use_data(data_icd_9,
                   overwrite = TRUE)
