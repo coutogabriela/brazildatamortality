@@ -27,7 +27,58 @@ library(tidyr)
 
 library(brazildatamortality)
 
-plot_data <- brazildatamortality::data_icd_10
+
+```
+
+
+```{r merge_data}
+
+data_9  <- brazildatamortality::data_icd_9
+data_10 <- brazildatamortality::data_icd_10
+
+data_icd_9 <- data_icd_9 %>%
+  dplyr::select(sex = SEXO, 
+                death_year = DATAOBITO, 
+                code_cause = CAUSABAS, 
+                fetal = TIPOBITO, 
+                date = DATAOBITO, 
+                cityzenship = NATURAL, 
+                birth = DATANASC, 
+                marital = ESTCIVIL, 
+                job = OCUPACAO, 
+                city = MUNIRES, 
+                death_place = LOCOCOR, 
+                death_city = MUNIOCOR)
+
+colnames(data_10)
+colnames(data_9)
+
+
+
+#death_year = lubridate::year(death_date),
+   
+   
+#computed_age = difftime(death_date, birth_date, units = "days"),
+#    death_month = lubridate::month(date) %>%
+#    dplyr::mutate(birth = lubridate::as_date(DATANASC, format = %d%m%Y)) %>%
+#    dplyr::mutate(age = lubridate::as_date(death_year - birth)) %>%
+
+# TODO:
+# como rodar "death_city" - "MUNIOCOR" Municipio de ocorrencia/distribuição no território (dado disponivel no IBGE)
+# como rodar "city" - "MUNIRES" - Municipio de residencia (dado disponivel no IBGE)
+# como rodar "job" - "OCUPACAO" - Tabelas disponíveis para CID9  "TAB_OCUP.csv" e CID10 "TABOCUP.csv"
+
+#%>%
+  bind_rows(data_icd_10)
+Erro: Can't combine `..1$death_year` <character> and `..2$death_year` <double>.
+Run `rlang::last_error()` to see where the error occurred.
+Me parece qute vamos a tener que verificar ese condigo antes
+data_icd_9 <- raw_data_tb %>%
+ dplyr::select(-raw_data) %>%
+ tidyr::unnest(data) %>%
+ dplyr::mutate(date = lubridate::as_date(DATAOBITO, format = "%y%m%d%"),
+               death_year = lubridate::year(date),
+               code_cause = stringr::str_sub(CAUSABAS, 1, 3))
 
 ```
 
@@ -40,6 +91,8 @@ plot_data <- brazildatamortality::data_icd_10
 ## Results.
 
 ```{r plot_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
+
+plot_data <- brazildatamortality::data_icd_10
 
 plot_data %>%
   dplyr::group_by(death_year) %>%

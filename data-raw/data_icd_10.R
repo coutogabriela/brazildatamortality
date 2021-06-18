@@ -16,7 +16,8 @@ library(usethis)
 # Ministerio da saude do Brasil.
 # Sistema de Informação sobre Mortalidade (SIM).
 
-data_dir <- "C:/Users/PGCST/Documents/Gabriela/SIM/DADOS_CID10_DBC"
+#data_dir <- "C:/Users/PGCST/Documents/Gabriela/SIM/DADOS_CID10_DBC"
+data_dir <- "./inst/extdata/SIM/DADOS_CID10/Rio_de_Janeiro"
 stopifnot(dir.exists(data_dir))
 
 
@@ -56,43 +57,49 @@ raw_data_tb <- data_dir %>%
 
 
 
-
 #---- Recode variables ----
 
-2_data_icd_10 <- raw_data_tb %>%
+data_icd_10 <- raw_data_tb %>%
     tidyr::unnest(data) %>%
-    dplyr::mutate(date = lubridate::as_date(DTOBITO, format = "%d%m%Y"), #Y são quatro dígitos
-                  death_year = lubridate::year(date),
-#                 death_month = lubridate::month(date) %>%
-#    dplyr::mutate(birth = lubridate::as_date(DATANASC, format = %d%m%Y)) %>%
-#    dplyr::mutate(age = lubridate::as_date(death_year - birth)) %>%
+    dplyr::mutate(death_date = lubridate::as_date(DTOBITO, format = "%d%m%Y"),
+                  birth_date = lubridate::as_date(DTNASC, format = "%d%m%Y"),
+                  death_year = lubridate::year(death_date),
                   code_cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
     dplyr::mutate(cause = dplyr::recode(code_cause,
-                                        "X30" = "Heat",       #"Exposure to excessive natural heat",
-                                        "X31" = "Cold",       #"Exposure to excessive natural code",
-                                        "X32" = "Sunlight",   #"Exposure to sunlight",
-                                        "X33" = "Lightning",  #"Lightening",
-                                        "X34" = "Earthquake", #"Earthquake",
-                                        "X35" = "Volcano",    #"Volcanic eruption",
-                                        "X36" = "Landslide",  #"Avalanche, landslide and other earth movements",
-                                        "X37" = "Cataclismyc",    #"Cataclysmic storm",
-                                        "X38" = "Flood",      #"Flood",
-                                        "X39" = "Other",      #"Exposure to other forces of nature/não especificadas"
+                                        "X30" = "Heat",
+                                        "X31" = "Cold",
+                                        "X32" = "Sunlight",
+                                        "X33" = "Lightning",
+                                        "X34" = "Earthquake",
+                                        "X35" = "Volcano",
+                                        "X36" = "Landslide",
+                                        "X37" = "Cataclismyc",
+                                        "X38" = "Flood",
+                                        "X39" = "Other",
                                         .default = NA_character_),
                   sex = dplyr::recode(SEXO,
                                       "0" = "No information",
                                       "1" = "Male",
                                       "2" = "Female",
                                       .default = NA_character_),
-                  education = dplyr::recode(ESC,            # Anos de estudo concluído
-                                        "1" = "None",
-                                        "2" = "1 to 3",
-                                        "3" = "4 to 7",
-                                        "4" = "8 to 11",
-                                        "5" = "12 or more",
-                                        "9" = "Ignored",
-                                         .default = NA_character_),
-                  marital = dplyr::recode(ESTCIVIL,
+                  literacy = dplyr::recode(ESC,
+                                            "1" = "None",
+                                            "2" = "1 to 3",
+                                            "3" = "4 to 7",
+                                            "4" = "8 to 11",
+                                            "5" = "12 or more",
+                                            "9" = "Ignored",
+                                            .default = NA_character_),
+                  # TODO: Review using the international reference https://en.wikipedia.org/wiki/International_Standard_Classification_of_Education#ISCED_2011_levels_of_education_and_comparison_with_ISCED_1997
+                  education = dplyr::recode(ESC2010,
+                                            "0" = "None",
+                                            "1" = "Primary",
+                                            "2" = "Primary",
+                                            "3" = "Secondary",
+                                            "4" = "Barchelor incomplete",
+                                            "5" = "Barchelor",
+                                            .default = NA_character_),
+                  marital = dplyr::recode(ESTCIV,
                                           "1" = "Single",
                                           "2" = "Married",
                                           "3" = "Widow",
@@ -107,51 +114,25 @@ raw_data_tb <- data_dir %>%
                                         "4" = "Public place",
                                         "5" = "Other",
                                         .default = NA_character_),
-                  color/race = dplyr::recode(RACACOR,
-                                          "1" = "White",
-                                          "2" = "Black",
-                                          "3" = "Yellow",
-                                          "4" = "Mixed", #Pardos see: https://en.wikipedia.org/wiki/Pardo_Brazilians#cite_note-33
-                                          "5" = "Indigenous",
-                                          .default = NA_character_),
-                  literacy = dplyr::recode(INSTRUCAO,
-                                           "O" = "Ignored",
-                                           "1" = "None",
-                                           "2" = "Primary",
-                                           "3" = "Secondary",
-                                           "4" = "Barchelor",
-                                           .default = NA_character_)) %>%
+                  # NOTE: Pardos see: https://en.wikipedia.org/wiki/Pardo_Brazilians#cite_note-33
+                  color_race = dplyr::recode(RACACOR,
+                                             "1" = "White",
+                                             "2" = "Black",
+                                             "3" = "Yellow",
+                                             "4" = "Mixed",
+                                             "5" = "Indigenous",
+                                             .default = NA_character_)) %>%
     dplyr::select(cause,
                   sex,
                   education,
                   literacy,
                   death_year,
-                  #death_month,
-                  #age
                   marital,
                   locus,
-                  color/race,
+                  color_race,
                   job = OCUP,
                   city = CODMUNRES,
                   death_city = CODMUNOCOR)
 
-dplyr::select(-code_cause,
-              -file.path,
-              -date,
-              -fetal,
-              -date = DTOBITO,
-              -cityzenship = NATURAL,
-              -birth = DTNASC)
-
-
-usethis::use_data(2_data_icd_10,
-                  overwrite = TRUE)
-
-
-# como rodar "death_city" - "MUNIOCOR" Municipio de ocorrencia/distribuição no território (dado disponivel no IBGE)
-# como rodar "city" - "MUNIRES" - Municipio de residencia (dado disponivel no IBGE)
-# como rodar "job" - "OCUPACAO" - Tabelas disponíveis para CID9  "TAB_OCUP.csv" e CID10 "TABOCUP.csv"
-
-
-
-
+    usethis::use_data(data_icd_10,
+                      overwrite = TRUE)

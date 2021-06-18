@@ -16,7 +16,8 @@ library(usethis)
 # Ministerio da saude do Brasil.
 # Sistema de Informação sobre Mortalidade (SIM).
 
-data_dir <- "C:/Users/PGCST/Documents/Gabriela/SIM/DADOS_CID9_DBC"
+#data_dir <- "C:/Users/PGCST/Documents/Gabriela/SIM/DADOS_CID9_DBC"
+data_dir <- "./inst/extdata/SIM/DADOS_CID9/Rio_de_Janeiro"
 stopifnot(dir.exists(data_dir))
 
 
@@ -31,7 +32,7 @@ process_data <- function(x) {
     x %>%
         tibble::as_tibble() %>%
         # NOTE: Filter deaths by natural causes.
-        dplyr::filter(stringr::str_detect(CAUSABAS, "^(900.0|900.9|901.0|901.9|908|908.2|909.0|909.1|909.2|909.3|909.4|909.8|909.9)")) %>%
+        dplyr::filter(stringr::str_detect(CAUSABAS, "^90")) %>%
         return()
 }
 
@@ -41,7 +42,7 @@ process_data <- function(x) {
 # Check https://www.brodrigues.co/blog/2021-03-19-no_loops_tidyeval/
 future::plan(multisession,
              workers = future::availableCores())
-raw_data_tb_2 <- data_dir %>%
+raw_data_tb <- data_dir %>%
     list.files(pattern = ".*[.](dbc|DBC)",
                full.names = TRUE,
                recursive = TRUE) %>%
@@ -52,35 +53,31 @@ raw_data_tb_2 <- data_dir %>%
                                                                        as.is = TRUE)))) %>%
     dplyr::mutate(data = furrr::future_map(raw_data, process_data))
 
+
+
 #---- Recode variables ----
-
-# falta birth (DATANASC)
-# falta age (DATAOBITO - DATANASC)
-# falta death_month (DATAOBITO apenas %m%)
-
 
 data_icd_9 <- raw_data_tb %>%
     tidyr::unnest(data) %>%
-    dplyr::mutate(date = lubridate::as_date(DATAOBITO, format = "%Y%m%d"), #Y são apenas 2 dígitos
-                  death_year = lubridate::year(date),
-#                 death_month = lubridate::month(date) %>%
-#    dplyr::mutate(birth = lubridate::as_date(DATANASC, format = %Y%m%d)) %>%
-#    dplyr::mutate(age = lubridate::as_date(death_year - birth)) %>%
+    dplyr::mutate(death_date = lubridate::as_date(DATAOBITO, format = "%y%m%d"),
+                  birth_date = lubridate::as_date(DATANASC,  format = "%Y%m%d"),
                   code_cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
     dplyr::mutate(cause = dplyr::recode(code_cause,
-                                        "909.0" = "Heat",         #"Accident caused by excessive Heat"
-                                        "909.9" = "Heat",         #"Accident caused by excessive Heat"
-                                        "901.0" = "Cold",         #"Accident caused by excessive Cold"
-                                        "901.9" = "Cold",         #"Accident caused by excessive Cold"
-                                        "908" = "Cataclismyc",    #"Accident caused by cataclysmic storms"
-                                        "908.2" = "Floods",       #"Accident caused by floods"
-                                        "909.0" = "Earthquake",   #"Accident caused by cataclysmic earth surface movement/Earthquakes"
-                                        "909.1" = "Volcano",      #"Accident caused by volcanic eruption"
-                                        "909.2" = "Landslides",   #"Accident caused by cataclysmic earth surface movement/Avalanche, landslides or mudslide"
-                                        "909.3" = "Landslides",   #"Accident caused by cataclysmic earth surface movement/Collapse of man-made structure"
-                                        "909.4" = "Earthquake",   #"Tidalwave cause by earthquake"
-                                        "909.8" = "Other",        #"Other cataclysmic earth surface movement"
-                                        "909.9" = "Other",        #"Unspecified cataclysmic earth surface movement"
+                                        "9000" = "Heat",         #"Accident caused by excessive Heat"
+                                        "9009" = "Heat",         #"Accident caused by excessive Heat"
+                                        "9010" = "Cold",         #"Accident caused by excessive Cold"
+                                        "9019" = "Cold",         #"Accident caused by excessive Cold"
+                                        "908"  = "Cataclismyc",  #"Accident caused by cataclysmic storms"
+                                        "908X" = "Storms",       # TODO: What is 908X?
+                                        "9082" = "Floods",       #"Accident caused by floods"
+                                        "909X" = "Earth surface movement", # TODO: What is 909X?
+                                        "9090" = "Earthquake",   #"Accident caused by cataclysmic earth surface movement/Earthquakes"
+                                        "9091" = "Volcano",      #"Accident caused by volcanic eruption"
+                                        "9092" = "Landslides",   #"Accident caused by cataclysmic earth surface movement/Avalanche, landslides or mudslide"
+                                        "9093" = "Landslides",   #"Accident caused by cataclysmic earth surface movement/Collapse of man-made structure"
+                                        "9094" = "Earthquake",   #"Tidalwave cause by earthquake"
+                                        "9098" = "Other",        #"Other cataclysmic earth surface movement"
+                                        "9099" = "Other",        #"Unspecified cataclysmic earth surface movement"
                                         .default = NA_character_),
                   sex = dplyr::recode(SEXO,
                                       "0" = "No information",
@@ -88,58 +85,42 @@ data_icd_9 <- raw_data_tb %>%
                                       "2" = "Female",
                                       .default = NA_character_),
                   marital = dplyr::recode(ESTCIVIL,
-                                    "0" = "No information",
-                                    "1" = "Single",
-                                    "2" = "Married",
-                                    "3" = "Widow",
-                                    "4" = "Separated",
-                                    "5" = "Other",
-                                    .default = NA_character_),
+                                          "0" = "No information",
+                                          "1" = "Single",
+                                          "2" = "Married",
+                                          "3" = "Widow",
+                                          "4" = "Separated",
+                                          "5" = "Other",
+                                          .default = NA_character_),
                   locus = dplyr::recode(LOCOCOR,
-                                    "0" = "No information",
-                                    "1" = "Hospital",
-                                    "2" = "Street",
-                                    "3" = "Home",
-                                    "4" = "Other",
+                                        "0" = "No information",
+                                        "1" = "Hospital",
+                                        "2" = "Street",
+                                        "3" = "Home",
+                                        "4" = "Other",
                                         .default = NA_character_),
-                 literacy = dplyr::recode(INSTRUCAO,
-                                    "O" = "Ignored",
-                                    "1" = "None",
-                                    "2" = "Primary",
-                                    "3" = "Secondary",
-                                    "4" = "Barchelor",
-                                        .default = NA_character_)) %>%
+                  # TODO: Review using the international reference https://en.wikipedia.org/wiki/International_Standard_Classification_of_Education#ISCED_2011_levels_of_education_and_comparison_with_ISCED_1997
+                  literacy = dplyr::recode(INSTRUCAO,
+                                           "O" = "Ignored",
+                                           "1" = "None",
+                                           "2" = "Primary",
+                                           "3" = "Secondary",
+                                           "4" = "Barchelor",
+                                           .default = NA_character_)) %>%
 
-dplyr::select(cause,
-              sex,
-              literacy,
-              death_year,
-              #death_month,
-              #age
-              marital,
-              locus,
-              job = OCUPACAO,
-              city = MUNIRES,
-              death_city = MUNIOCOR)
+    dplyr::select(death_date,
+                  birth_date,
+                  cause,
+                  sex,
+                  literacy,
+                  marital,
+                  locus,
+                  job = OCUPACAO,
+                  city = MUNIRES,
+                  death_city = MUNIOCOR)
 
-dplyr::select(-code_cause,
-              -file.path,
-              -date,
-              -fetal,
-              -date = DTOBITO,
-              -cityzenship = NATURAL,
-              -birth = DTNASC)
+usethis::use_data(data_icd_9,
+                  overwrite = TRUE)
 
-
-usethis::use_data(2_data_icd_9,
-                      overwrite = TRUE)
-
-
-
-# como rodar "death_city" - "MUNIOCOR" Municipio de ocorrencia/distribuição no território (dado disponivel no IBGE)
-# como rodar "city" - "MUNIRES" - Municipio de residencia (dado disponivel no IBGE)
-# como rodar "job" - "OCUPACAO" - Tabelas disponíveis para CID9  "TAB_OCUP.csv" e CID10 "TABOCUP.csv"
-
-
-
-
+# TODO: Get town codes from IBGE and add it to this package.
+# TODO: Find if occupation is relevant to the analysis.
