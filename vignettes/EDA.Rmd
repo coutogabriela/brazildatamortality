@@ -31,7 +31,7 @@ library(brazildatamortality)
 ```
 
 
-```{r check_variables}
+```{r check_variables, include=FALSE}
 
 # Check that data before and after 1096 have the same variables and categories.
 
@@ -49,11 +49,11 @@ data_9  %>% sample_n(6) %>% pull(birth_date) %>% unique() %>% sort()
 data_10 %>% pull(cause) %>% unique() %>% sort()
 data_9  %>% pull(cause) %>% unique() %>% sort()
 
-# OK
+# NOTE: 6 versus 7 digit codes. 
 data_10 %>% sample_n(6) %>% pull(residence_city) %>% unique() %>% sort()
 data_9  %>% sample_n(6) %>% pull(residence_city) %>% unique() %>% sort()
 
-# OK
+# NOTE: 6 versus 7 digit codes. 
 data_10 %>% sample_n(6) %>% pull(death_city) %>% unique() %>% sort()
 data_9  %>% sample_n(6) %>% pull(death_city) %>% unique() %>% sort()
 
@@ -61,19 +61,19 @@ data_9  %>% sample_n(6) %>% pull(death_city) %>% unique() %>% sort()
 data_10 %>% sample_n(6) %>% pull(death_date) %>% unique() %>% sort()
 data_9  %>% sample_n(6) %>% pull(death_date) %>% unique() %>% sort()
 
-# OK. 
+# TODO: Recode jobs.
 data_10 %>% sample_n(6) %>% pull(job) %>% unique() %>% sort()
 data_9  %>% sample_n(6) %>% pull(job) %>% unique() %>% sort()
 
-# OK
+# TODO: Issue with Bachelor incomplete. 
 data_10 %>% pull(education) %>% unique() %>% sort()
 data_9  %>% pull(education) %>% unique() %>% sort()
 
-# OK
+# TODO: What happened to hospital? (sid 10)
 data_10 %>% sample_n(6) %>% pull(locus) %>% unique() %>% sort()
 data_9  %>% sample_n(6) %>% pull(locus) %>% unique() %>% sort()
 
-# OK
+# TODO: No information, other, ignored
 data_10 %>% pull(marital) %>% unique() %>% sort()
 data_9  %>% pull(marital) %>% unique() %>% sort()
 
@@ -81,14 +81,13 @@ data_9  %>% pull(marital) %>% unique() %>% sort()
 data_10 %>% pull(sex) %>% unique() %>% sort()
 data_9  %>% pull(sex) %>% unique() %>% sort()
 
-# TODO: Standarize jobs codes. 
 # TODO: Add to the package the list of codes of towns from IBGE (SHP).
 
 ```
 
 
 
-```{r merge_both_data}
+```{r merge_both_data, include=FALSE}
 
 data_10 <- data_10 %>% 
   dplyr::select(birth_date, cause, death_city, death_date, education, 
@@ -124,8 +123,37 @@ regular_data <- data_tb %>%
 
 ## Results.
 
-```{r plot_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
+```{r eda, echo=FALSE, fig.width = 7, fig.height = 5}
 
+library(GGally)
+
+# data_tb %>%
+#   dplyr::filter(death_year > 2005) %>%
+#   dplyr::mutate(death_month = stringr::str_pad(death_month, pad = "0", width = 2)) %>%
+#   dplyr::mutate(death_year = as.factor(death_year),
+#                 death_month = as.factor(death_month)) %>%
+#   dplyr::select(cause, education, locus, marital, 
+#                 sex, death_year, death_month) %>%
+#   GGally::ggpairs(ggplot2::aes(color = cause))
+
+# data_tb %>%
+#   dplyr::mutate(death_month = stringr::str_pad(death_month, pad = "0", 
+#                                                width = 2)) %>%
+#   dplyr::mutate(death_year = as.factor(death_year),
+#                 death_month = as.factor(death_month)) %>%
+#   dplyr::select(cause, education, locus, marital, 
+#                 sex, death_year, death_month) %>%
+#   tidyr::pivot_longer(education:death_month) %>%
+#   ggplot2::ggplot(ggplot2::aes(y = value, fill = cause)) +
+#   ggplot2::geom_bar(position = "fill") +
+#   ggplot2::facet_wrap(vars(name), scales = "free") +
+#   ggplot2::labs(x = NULL, y = NULL, fill = NULL)
+
+
+```
+
+
+```{r plot_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
 
 regular_data %>%
   dplyr::group_by(death_year) %>%
@@ -139,11 +167,30 @@ regular_data %>%
   ggplot2::geom_line() +
   ggplot2::xlab("Year") +
   ggplot2::ylab("Accumulated number of fatalities") +
-  ggplot2::ggtitle("Accumulated number of deaths by forces of nature")
+  ggplot2::ggtitle("Cumulative number of deaths by forces of nature")
 
 
 ```
 
+```{r plot_causes_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
+
+regular_data %>%
+  dplyr::group_by(cause, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(cause, death_year) %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = cumsum,
+                               color = cause,
+                               group = cause)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Cumulative number of fatalities") +
+  ggplot2::ggtitle("Cumulative sum of deaths by cause")
+
+```
 
 ```{r plot_total, echo=FALSE, fig.width = 7, fig.height = 5}
 
@@ -169,50 +216,6 @@ regular_data %>%
 
 ```
 
-
-```{r plot_causes, echo=FALSE, fig.width = 7, fig.height = 5}
-
-regular_data %>%
-  dplyr::group_by(cause, death_year) %>%
-  dplyr::summarize(fatalities = dplyr::n(), 
-                   .groups = "drop") %>%
-  dplyr::arrange(cause, death_year) %>%
-  dplyr::filter(!is.na(cause), !is.na(death_year)) %>%
-  ggplot2::ggplot(ggplot2::aes(x = death_year,
-                               y = fatalities,
-                               color = cause,
-                               group = cause)) +
-  ggplot2::geom_point() +
-  ggplot2::geom_line() +
-  #ggplot2::ylim(0, 50) +
-  ggplot2::xlab("Year") +
-  ggplot2::ylab("Number of fatalities") +
-  ggplot2::ggtitle("Death by cause") + 
-  ggplot2::scale_color_brewer(palette = "Paired")
-
-```
-
-```{r plot_causes_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
-
-regular_data %>%
-  dplyr::group_by(cause, death_year) %>%
-  dplyr::summarize(fatalities = dplyr::n()) %>%
-  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
-  dplyr::ungroup() %>%
-  dplyr::arrange(cause, death_year) %>%
-  ggplot2::ggplot(ggplot2::aes(x = death_year,
-                               y = cumsum,
-                               color = cause,
-                               group = cause)) +
-  ggplot2::geom_point() +
-  ggplot2::geom_line() +
-  ggplot2::xlab("Year") +
-  ggplot2::ylab("Cumulative number of fatalities") +
-  ggplot2::ggtitle("Cumulative sum of deaths by cause")
-
-```
-
-
 ```{r plot_causes_sex_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
 
 regular_data %>%
@@ -220,6 +223,34 @@ regular_data %>%
   dplyr::group_by(sex, cause, death_year) %>%
   dplyr::arrange(sex, cause, death_year) %>%
   dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::filter(cause %in% c("Cataclismyc", 
+                             "Cataclismyc and Floods",
+                             "Cold", 
+                             "Lightning", 
+                             "Landslide")) %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+  dplyr::ungroup() %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = cumsum,
+                               color = cause,
+                               group = cause)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  ggplot2::facet_wrap(~sex) +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Cumulative number of fatalities by sex") +
+  ggplot2::ggtitle("Cumulative sum of deaths by cause and sex")
+
+regular_data %>%
+  dplyr::filter(sex %in% c("Male", "Female")) %>%
+  dplyr::group_by(sex, cause, death_year) %>%
+  dplyr::arrange(sex, cause, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::filter(!(cause %in% c("Cataclismyc", 
+                             "Cataclismyc and Floods",
+                             "Cold", 
+                             "Lightning", 
+                             "Landslide"))) %>%
   dplyr::mutate(cumsum = cumsum(fatalities)) %>%
   dplyr::ungroup() %>%
   ggplot2::ggplot(ggplot2::aes(x = death_year,
@@ -235,12 +266,66 @@ regular_data %>%
 
 ```
 
+```{r plot_causes, echo=FALSE, fig.width = 7, fig.height = 5}
+
+# High impact
+data_tb %>%
+  dplyr::group_by(cause, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n(), 
+                   .groups = "drop") %>%
+  dplyr::arrange(cause, death_year) %>%
+  dplyr::filter(cause %in% c("Cataclismyc",
+                             "Cataclismyc and Floods", 
+                             "Flood",
+                             "Landslide",
+                             "Lightning")) %>%             
+  dplyr::filter(!is.na(cause), !is.na(death_year)) %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = fatalities,
+                               color = cause,
+                               group = cause)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Death by cause") + 
+  ggplot2::scale_color_brewer(palette = "Paired")
+
+# Low impact
+data_tb %>%
+  dplyr::group_by(cause, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n(), 
+                   .groups = "drop") %>%
+  dplyr::arrange(cause, death_year) %>%
+  dplyr::filter(!(cause %in% c("Cataclismyc",
+                             "Cataclismyc and Floods", 
+                             "Flood",
+                             "Landslide",
+                             "Lightning"))) %>%             
+  dplyr::filter(!is.na(cause), !is.na(death_year)) %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = fatalities,
+                               color = cause,
+                               group = cause)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Death by cause") + 
+  ggplot2::scale_color_brewer(palette = "Paired")
+
+```
+
+
 
 ```{r plot_causes_esc_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
 
+# TODO: What do we do with the GAP from 1995 to 2012?
+# The variables of CID9 and CID10 are not the same
 regular_data %>%
   dplyr::mutate(education = as.factor(education),
                 cause     = as.factor(cause)) %>%
+  tidyr::drop_na(education) %>%
   dplyr::group_by(education, cause, death_year) %>%
   dplyr::arrange(education, cause, death_year) %>%
   dplyr::summarize(fatalities = dplyr::n()) %>%
@@ -308,6 +393,14 @@ regular_data %>%
   ggplot2::ggtitle("Number of deaths by forces of nature by cause")
 
 ```
+
+
+TODO: make figure including
++ data_10 cataclismyc, flood, and landslide
++ data_9 cataclismyc & floods, and Earth surface movement.
++ Add figure of low impact death causes by season (x = month, 
+y = number of fatalities, color = cause).
++ design sex-analysis figure for  outlier_data NOT using time series.
 
 ## Conclusions.
 
