@@ -27,7 +27,6 @@ library(tidyr)
 
 library(brazildatamortality)
 
-
 ```
 
 
@@ -101,7 +100,7 @@ data_tb <- data_9 %>%
   dplyr::mutate(death_year = lubridate::year(death_date),
                 computed_age = difftime(death_date, birth_date, 
                                         units = "days"),
-                death_month = lubridate::month(death_date)) %>%
+                death_month = as.integer(lubridate::month(death_date))) %>%
   tidyr::drop_na(cause, death_date)
 
 outlier_data <- data_tb %>%
@@ -406,21 +405,27 @@ state_sf <- geobr::read_state(year = 2010,
                               showProgress = FALSE)
 state_tb <- state_sf %>%
   sf::st_set_geometry(NULL) %>%
-  tibble::as_tibble()
+  tibble::as_tibble() %>%
+  dplyr::select(abbrev_state, name_state, name_region)
 
 town_sf <- geobr::read_municipality(year = 2010, 
                                     simplified = TRUE,
-                                    showProgress = FALSE)
+                                    showProgress = FALSE) %>%
+  dplyr::mutate(code_muni = as.character(code_muni))
 town_tb <- town_sf %>%
   sf::st_set_geometry(NULL) %>%
   tibble::as_tibble() %>%
-  dplyr::mutate(code_muni = as.character(code_muni)) %>%
+  dplyr::select(code_muni, name_muni, abbrev_state) %>%
   dplyr::left_join(state_tb, by = "abbrev_state")
+town_sf <- town_sf %>%
+  dplyr::select(code_muni) %>%
+  left_join(town_tb, by = "code_muni")
 
 data_tb %>%
-  dplyr::left_join(town_tb, by = c("death_city" = "code_muni")) %>%
+  dplyr::left_join(town_tb, 
+                   by = c("death_city" = "code_muni")) %>%
   dplyr::group_by(death_year, cause, abbrev_state) %>%
-  dplyr::summarize(fatalities = dplyr::n(), 
+  dplyr::summarize(fatalities = dplyr::n(),
                    .groups = "drop") %>%
   tidyr::drop_na() %>%
   ggplot2::ggplot(ggplot2::aes(x = death_year,
@@ -433,6 +438,30 @@ data_tb %>%
   ggplot2::xlab("Year") +
   ggplot2::ylab("Number of fatalities") +
   ggplot2::ggtitle("Deaths by cause by state")
+
+# cumsum
+data_tb %>%
+  dplyr::left_join(town_tb, 
+                   by = c("death_city" = "code_muni")) %>%
+  dplyr::group_by(abbrev_state, cause, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(cause, death_year) %>%
+  tidyr::drop_na() %>%
+  dplyr::mutate_if(is.character, as.factor) %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = cumsum, 
+                               color = cause, 
+                               )) +
+  ggplot2::geom_point(ggplot2::aes(shape = cause)) +
+  ggplot2::geom_line(ggplot2::aes(linetype = cause)) +
+  ggplot2::facet_wrap(vars(abbrev_state)) +
+  ggplot2::scale_y_log10() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Cumulative number of fatalities (log)") +
+  ggplot2::ggtitle("Deaths by cause by state")
+
 
 data_tb %>%
   dplyr::left_join(town_tb, by = c("death_city" = "code_muni")) %>%
@@ -451,16 +480,199 @@ data_tb %>%
   ggplot2::ylab("Number of fatalities") +
   ggplot2::ggtitle("Deaths by cause by region")
 
+# cumsum
+data_tb %>%
+  dplyr::left_join(town_tb, 
+                   by = c("death_city" = "code_muni")) %>%
+  dplyr::group_by(name_region, cause, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(cause, death_year) %>%
+  tidyr::drop_na() %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = cumsum, 
+                               color = name_region)) +
+  ggplot2::geom_point(ggplot2::aes(shape = name_region)) +
+  ggplot2::geom_line(ggplot2::aes(linetype = name_region)) +
+  ggplot2::facet_wrap(~cause) +
+  ggplot2::scale_y_log10() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Cumulative number of fatalities (log)") +
+  ggplot2::ggtitle("Deaths by cause by region")
+
 ```
 
 
+
+```{r todo1, echo=FALSE, fig.width = 10, fig.height = 7}
+
+# + data_10 cataclismyc, flood, and landslide
+# + data_9 cataclismyc & floods, and Earth surface movement.
+
+# NOTE: The increment of deaths by landslide in the Sudeste region.
+data_tb %>%
+  dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
+                             "Cataclismyc and Floods", 
+                             "Earth surface movement and Eruption")) %>%
+  dplyr::left_join(town_tb, 
+                   by = c("death_city" = "code_muni")) %>%
+  dplyr::group_by(name_region, cause, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(cause, death_year) %>%
+  tidyr::drop_na() %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = cumsum, 
+                               color = name_region)) +
+  ggplot2::geom_point(ggplot2::aes(shape = name_region)) +
+  ggplot2::geom_line(ggplot2::aes(linetype = name_region)) +
+  ggplot2::facet_wrap(~cause) +
+  ggplot2::scale_y_log10() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Cumulative number of fatalities (log)") +
+  ggplot2::ggtitle("Deaths by cause by region")
+
+data_tb %>%
+  dplyr::left_join(town_tb, 
+                   by = c("death_city" = "code_muni")) %>%
+  dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
+                             "Cataclismyc and Floods", 
+                             "Earth surface movement and Eruption"),
+                name_region == "Sudeste") %>% 
+  dplyr::group_by(abbrev_state, cause, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(cause, death_year) %>%
+  tidyr::drop_na() %>%
+  dplyr::mutate_if(is.character, as.factor) %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = cumsum, 
+                               color = cause, 
+                               )) +
+  ggplot2::geom_point(ggplot2::aes(shape = cause)) +
+  ggplot2::geom_line(ggplot2::aes(linetype = cause)) +
+  ggplot2::facet_wrap(vars(abbrev_state)) +
+  ggplot2::scale_y_log10() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Cumulative number of fatalities (log)") +
+  ggplot2::ggtitle("Deaths by cause by state")
+
+```
+
+
+
+```{r todo3, echo=FALSE, fig.width = 10, fig.height = 7}
+
+#+ maps by region? by state? which year?
+town_data <- data_tb %>%
+  dplyr::left_join(town_tb, 
+                   by = c("death_city" = "code_muni")) %>%
+  dplyr::group_by(death_city, cause) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(cause = stringr::str_replace_all(cause, 
+                                                 pattern = " ",
+                                                 replacement = "_")) %>%
+  tidyr::pivot_wider(id_cols = death_city, 
+                     names_from = cause,
+                     values_from = fatalities)
+
+my_region <- "Sudeste"
+town_sf %>%
+  sf::st_make_valid() %>% 
+  dplyr::select(code_muni) %>%
+  dplyr::mutate(code_muni = as.character(code_muni)) %>%
+  sf::st_centroid() %>% 
+  dplyr::left_join(town_tb, by = "code_muni") %>%
+  dplyr::left_join(town_data, by = c("code_muni" = "death_city")) %>%
+  dplyr::filter(name_region == my_region) %>%
+  ggplot2::ggplot() +
+  ggplot2::geom_sf(data = dplyr::filter(town_sf, 
+                                        name_region == my_region)) +
+  ggplot2::geom_sf(ggplot2::aes(color = Lightning, 
+                                size  = Lightning)) 
+
+# State
+state_data <- data_tb %>%
+  dplyr::left_join(town_tb, 
+                    by = c("death_city" = "code_muni")) %>%
+  dplyr::group_by(abbrev_state, cause) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(log_fatalities = log(fatalities))
+
+
+library(geogrid)
+
+state_cells <-  state_sf %>%
+  geogrid::calculate_grid(grid_type = "hexagonal", 
+                          seed = 4)
+state_hex <- geogrid::assign_polygons(state_sf, state_cells) %>%
+  dplyr::select(abbrev_state) %>% 
+  dplyr::left_join(state_tb, by = "abbrev_state")
+
+plot_sf <- merge(state_hex, state_data, 
+                 by = "abbrev_state",
+                 all.x = TRUE)
+plot_sf %>%
+  ggplot2::ggplot() +
+  ggplot2::geom_sf(data = state_hex) +
+  ggplot2::geom_sf_label(ggplot2::aes(label = abbrev_state))
+plot_sf %>%
+  ggplot2::ggplot() +
+  ggplot2::geom_sf(data = state_hex) +
+  ggplot2::geom_sf(ggplot2::aes(fill = log_fatalities), colour = NA) +
+  ggplot2::scale_fill_viridis_c(option = 'plasma') +
+  ggplot2::facet_wrap(~cause)
+
+```
+
+
+```{r todo2, echo=FALSE, fig.width = 10, fig.height = 7}
+
+# + Add figure of low impact death causes by season (x = month, 
+# y = number of fatalities, color = cause).
+
+data_tb %>%
+  dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
+                             "Cataclismyc and Floods", 
+                             "Earth surface movement and Eruption")) %>%
+  dplyr::select(cause, death_month) %>%
+  tidyr::drop_na() %>%
+  dplyr::mutate_all(as.factor) %>%
+  ggplot2::ggplot() +
+  ggplot2::geom_bar(ggplot2::aes(x = death_month,
+                               fill = cause)) +
+  ggplot2::xlab("Month") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Deaths by cause by month")
+
+data_tb %>%
+  dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
+                             "Cataclismyc and Floods", 
+                             "Earth surface movement and Eruption")) %>%
+  dplyr::left_join(town_tb, 
+                   by = c("death_city" = "code_muni")) %>%
+  dplyr::select(name_region, cause, death_month) %>%
+  tidyr::drop_na() %>%
+  dplyr::mutate_all(as.factor) %>%
+  ggplot2::ggplot() +
+  ggplot2::geom_bar(ggplot2::aes(x = death_month,
+                               fill = cause)) +
+  ggplot2::facet_wrap(~name_region) +
+  ggplot2::xlab("Month") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Deaths by cause by region and month")
+
+```
+
+
+
 TODO: make figure including
-+ data_10 cataclismyc, flood, and landslide
-+ data_9 cataclismyc & floods, and Earth surface movement.
-+ Add figure of low impact death causes by season (x = month, 
-y = number of fatalities, color = cause).
-+ design sex-analysis figure for  outlier_data NOT using time series.
-+ maps by region? by state? which year?
++ design sex-analysis figure for outlier_data NOT using time series.
 
 ## Conclusions.
 
