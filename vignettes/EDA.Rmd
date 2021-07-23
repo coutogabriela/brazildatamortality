@@ -89,11 +89,17 @@ data_9  %>% pull(sex) %>% unique() %>% sort()
 ```{r merge_both_data, include=FALSE}
 
 data_10 <- data_10 %>% 
-  dplyr::select(birth_date, cause, death_city, death_date, education, 
-                job, locus, marital, residence_city, sex)
+    dplyr::select(birth_date, cause, death_city, death_date, education, 
+                  job, locus, marital, residence_city, sex, color_race, 
+                  literacy)
 data_9  <- data_9  %>% 
-  dplyr::select(birth_date, cause, death_city, death_date, education, 
-                job, locus, marital, residence_city, sex)
+    dplyr::select(birth_date, cause, death_city, death_date, education, 
+                  job, locus, marital, residence_city, sex) %>% 
+    dplyr::mutate(color_race = NA,
+                  literacy = NA)
+
+
+
 
 data_tb <- data_9 %>%
   dplyr::bind_rows(data_10) %>%

@@ -1,6 +1,7 @@
 ## Code to prepare `data_icd_9` dataset.
 
 library(dplyr)
+library(ensurer)
 library(furrr)
 library(future)
 library(ggplot2)
@@ -58,23 +59,44 @@ raw_data_tb <- data_dir %>%
 
 #---- Recode variables ----
 
+valid_interval <- lubridate::interval(
+    lubridate::as_date("700101", format = "%y%m%d"),
+    lubridate::as_date("991231", format = "%y%m%d")
+)
+
 data_icd_9 <- raw_data_tb %>%
     tidyr::unnest(data) %>%
-    dplyr::mutate(death_date = lubridate::as_date(DATAOBITO, format = "%y%m%d"),
-                  birth_date = lubridate::as_date(DATANASC,  format = "%Y%m%d"),
-                  code_cause = stringr::str_sub(CAUSABAS, 1, 3)) %>%
+    # NOTE: Dates with only year & month are assigned to the month's first day.
+    dplyr::mutate(DATOBITO = if_else(stringr::str_length(DATAOBITO) == 4,
+                                     paste0(DATAOBITO, "01"),
+                                     DATAOBITO)) %>%
+    # NOTE: Dates with day 00 are assigned to the month's first day.
+    dplyr::mutate(DATAOBITO = if_else(
+        stringr::str_sub(DATAOBITO, 5, 6) == "00",
+        paste0(stringr::str_sub(DATAOBITO, 1, 4), "01"),
+        DATAOBITO)
+    ) %>%
+    ensurer::ensure_that(all(stringr::str_length(.$DATAOBITO) == 6),
+                         err_desc = "Invalid number of digits in DATAOBITO") %>%
+    dplyr::mutate(
+        death_date = lubridate::as_date(DATAOBITO, format = "%y%m%d"),
+        birth_date = lubridate::as_date(DATANASC,  format = "%Y%m%d"),
+        code_cause = stringr::str_sub(CAUSABAS, 1, 3)
+    ) %>%
+    ensurer::ensure_that(all(.$death_date %within% valid_interval),
+                         err_desc = "Death dates out of valid interval") %>%
     dplyr::mutate(cause = dplyr::recode(code_cause,
-               #"Accident caused by excessive Heat" "X30"
-               "900" = "Heat",
-               #"Accident caused by excessive Cold" "X31"
-               "901" = "Cold",
-               #"Accident caused by lightning" "X33"
-               "907" = "Lightning",
-               #"Accident caused due to cataclysmic storms" "X37 e X38"
-               "908"  = "Cataclismyc and Floods",
-               #"Accident caused due to earth surface movement" "X34, X35 e X36"
-               "909" = "Earth surface movement and Eruption",
-               .default = NA_character_),
+                                        #"Accident caused by excessive Heat" "X30"
+                                        "900" = "Heat",
+                                        #"Accident caused by excessive Cold" "X31"
+                                        "901" = "Cold",
+                                        #"Accident caused by lightning" "X33"
+                                        "907" = "Lightning",
+                                        #"Accident caused due to cataclysmic storms" "X37 e X38"
+                                        "908"  = "Cataclismyc and Floods",
+                                        #"Accident caused due to earth surface movement" "X34, X35 e X36"
+                                        "909" = "Earth surface movement and Eruption",
+                                        .default = NA_character_),
                   sex = dplyr::recode(SEXO,
                                       "0" = "No information",
                                       "1" = "Male",
@@ -97,12 +119,12 @@ data_icd_9 <- raw_data_tb %>%
                                         .default = NA_character_),
                   # TODO: Review using the international reference https://en.wikipedia.org/wiki/International_Standard_Classification_of_Education#ISCED_2011_levels_of_education_and_comparison_with_ISCED_1997
                   education = dplyr::recode(INSTRUCAO,
-                                           "O" = "Ignored",
-                                           "1" = "None",
-                                           "2" = "Primary",
-                                           "3" = "Secondary",
-                                           "4" = "Barchelor",
-                                           .default = NA_character_)) %>%
+                                            "O" = "Ignored",
+                                            "1" = "None",
+                                            "2" = "Primary",
+                                            "3" = "Secondary",
+                                            "4" = "Barchelor",
+                                            .default = NA_character_)) %>%
 
     dplyr::select(birth_date,
                   cause,
