@@ -1,53 +1,110 @@
-#'
-#'
-#' Original source:
-#' World Health Organization
-#' International Statistic Classification of Diseases and Related Health Problems 10th revision
-#' ICD10
-#'
-#' Based on death certificate that captures more than 50 variables as:
-#' entity and municipality of registry,
-#' entity,
-#' municipality and locality of habitual residence;
-#' entity, municipality and locality of occurrence of death; sex, age, occupation, schooling, conjugal status, among others
-#'
 #' Deaths due to natural events in Brazil from 1996 to 2019.
 #'
-#' A dataset containing information of causes of death those caused by exposure to forces of nature
-#' CID10 from 1996 to 2019
+#' A dataset containing information of causes of death caused by exposure to
+#' forces of nature from 1996 to 2019. This data is based on death certificates
+#' that capture more than 50 variables. Original source: World Health
+#' Organization - International Statistic Classification of Diseases and Related
+#' Health Problems 10th revision ICD10.
 #'
-#'
-#' @format A data frame with 5862 rows and 105 variables:
+#' @format A data frame with XXXX rows and 12 variables:
 #' \describe{
-#' \item{Cause}{Cause of death.}
-#' \item{Sex}{Sex.}
-#' \item{Education}{Education level.}
-#' \item{death_year}{Year of the death.}
-#' \item{code_cause}{Identifier of the cause of death.}
-#' \item{file_path}{Path to the file from which the data is comming from.}
-#' \item{NUMERODO}{DEATH CERTIFICATE NUMBER}
-#' \item{TIPOBITO}{FETAL}
-#' \item{DTOBITO}{DATE}
-#' \item{NATURAL}{CITIZENSHIP}
-#' \item{DTNASC}{BIRTH}
-#' \item{IDADE}{AGE}
-#' \item{SEXO}{SEX}
-#' \item{RACACOR}{RACE}
-#' \item{ESTCIV}{MARITAL}
-#' \item{ESC}{EDUCATION}
-#' \item{OCUP}{JOB}
-#' \item{CODBAIRES}{NEIGHBOURHOOD}
-#' \item{CODMUNRES}{CITY}
-#' \item{LOCOCOR}{DEATH PLACE}
-#' \item{CODMUNOCOR}{CITY CODE}
-#' \item{IDADEMAE}{MOTHER AGE}
-#' \item{ESCMAE}{MOTHER EDUCATION}
-#' \item{OCUPMAE}{MOTHER JOB}
-#' \item{QTDFILVIVO}{N.CHILDREN}
-#' \item{ASSISTMED}{HEALTH CARE}
-#' \item{CAUSABAS}{CAUSE}
-#' \item{FONTE}{SOURCE}
-#' \item{CAUSABAS_O}{CAUSE}
+#'   \item{birth_date}{Date of birth}
+#'   \item{cause}{Cause of death}
+#'   \item{residence_city}{Code of the city of residence}
+#'   \item{color_race}{Skin color or ethnicity}
+#'   \item{death_city}{Code of the city of death}
+#'   \item{death_date}{Date of the death}
+#'   \item{education}{Education level}
+#'   \item{job}{Code of profession}
+#'   \item{literacy}{Number of years of education}
+#'   \item{locus}{Place of death}
+#'   \item{marital}{Marital status}
+#'   \item{sex}{Sex}
 #' }
-#' @source \url{http://www.TODO_update_url.info/}
+#' @source \url{http://www.diamondse.info/}
 "data_icd_10"
+
+
+
+#' Deaths due to natural events in Brazil from XXXX to 1995.
+#'
+#' TODO: Add description.
+#'
+#' @format A data frame with XXXX rows and 10 variables:
+#' \describe{
+#'   \item{birth_date}{Data of birth}
+#'   \item{cause}{Cause of death}
+#'   \item{residence_city}{Code of the city of residence}
+#'   \item{death_city}{Code of the city of death}
+#'   \item{death_date}{Date of the death. If the day of the month is unavailable, it is assumed the first day of the month}
+#'   \item{education}{Education level}
+#'   \item{job}{Code of profession}
+#'   \item{locus}{Place of death}
+#'   \item{marital}{Marital status}
+#'   \item{sex}{Sex}
+#' }
+#' @source \url{http://www.diamondse.info/}
+"data_icd_9"
+
+
+
+#' States of Brazil as sf simple features.
+#'
+#' Spatial limits of the Brazilian states in 2010 (simplified). These data was
+#' obtained from the package geobr. For more detail see \url{https://github.com/ipeaGIT/geobr}.
+#'
+#' @format A data frame with 27 rows and 6 variables:
+#' \describe{
+#'   \item{code_state}{Code of the state}
+#'   \item{abbrev_state}{Abbreviated name of the state}
+#'   \item{name_state}{Name of the state}
+#'   \item{code_region}{Code of the state's region}
+#'   \item{name_region}{Name of the state's region}
+#'   \item{geom}{Geometry}
+#' }
+#' @source \url{http://www.diamondse.info/}
+"state_sf"
+
+
+
+#' Hexagonal representation of the states of Brazil.
+#'
+#' Brazilian states (see state_sf) represented as hexagons using simple
+#' features.
+#'
+#' @format A data frame with 27 rows and 6 variables:
+#' \describe{
+#'   \item{code_state}{Code of the state}
+#'   \item{abbrev_state}{Abbreviated name of the state}
+#'   \item{name_state}{Name of the state}
+#'   \item{code_region}{Code of the state's region}
+#'   \item{name_region}{Name of the state's region}
+#'   \item{geometry}{Geometry}
+#' }
+#' @source \url{http://www.diamondse.info/}
+"state_hex"
+
+
+
+#' Towns of Brazil as sf simple features.
+#'
+#' Spatial limits of the Brazilian towns in 2010 (simplified). These data was
+#' obtained from the package geobr. For more detail see \url{https://github.com/ipeaGIT/geobr}.
+#'
+#' @format A data frame with 5567 rows and 9 variables:
+#' \describe{
+#'   \item{code_muni}{Code of the municipality}
+#'   \item{name_muni}{Name of the municipality}
+#'   \item{code_state}{Code of the sate}
+#'   \item{abbrev_state}{Abbreviated name of the state}
+#'   \item{code_meso}{Code of the meso-region}
+#'   \item{name_meso}{Name of the meso-region}
+#'   \item{code_micro}{Code of the micro-region}
+#'   \item{name_micro}{Name of the micro-region}
+#'   \item{name_state}{Name of the state}
+#'   \item{code_region}{Code of the region}
+#'   \item{name_region}{Name of the region}
+#'   \item{geom}{Geometry}
+#' }
+#' @source \url{http://www.diamondse.info/}
+"town_sf"
