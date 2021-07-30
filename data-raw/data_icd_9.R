@@ -59,15 +59,18 @@ raw_data_tb <- data_dir %>%
 
 #---- Recode variables ----
 
-valid_interval <- lubridate::interval(
+valid_interval <- list(
     lubridate::as_date("700101", format = "%y%m%d"),
     lubridate::as_date("991231", format = "%y%m%d")
 )
 
 data_icd_9 <- raw_data_tb %>%
     tidyr::unnest(data) %>%
+    dplyr::mutate(len_dataobito = stringr::str_length(DATAOBITO)) %>%
+    dplyr::filter(len_dataobito >= 4) %>%
+    dplyr::select(-len_dataobito) %>%
     # NOTE: Dates with only year & month are assigned to the month's first day.
-    dplyr::mutate(DATOBITO = if_else(stringr::str_length(DATAOBITO) == 4,
+    dplyr::mutate(DATAOBITO = if_else(stringr::str_length(DATAOBITO) == 4,
                                      paste0(DATAOBITO, "01"),
                                      DATAOBITO)) %>%
     # NOTE: Dates with day 00 are assigned to the month's first day.
@@ -83,7 +86,9 @@ data_icd_9 <- raw_data_tb %>%
         birth_date = lubridate::as_date(DATANASC,  format = "%Y%m%d"),
         code_cause = stringr::str_sub(CAUSABAS, 1, 3)
     ) %>%
-    ensurer::ensure_that(all(.$death_date %within% valid_interval),
+    tidyr::drop_na(death_date) %>%
+    ensurer::ensure_that(all(.$death_date >= valid_interval[[1]]),
+                         all(.$death_date <= valid_interval[[2]]),
                          err_desc = "Death dates out of valid interval") %>%
     dplyr::mutate(cause = dplyr::recode(code_cause,
                                         #"Accident caused by excessive Heat" "X30"
