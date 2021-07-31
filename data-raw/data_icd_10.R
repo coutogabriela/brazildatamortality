@@ -16,8 +16,8 @@ library(usethis)
 # Ministerio da saude do Brasil.
 # Sistema de Informação sobre Mortalidade (SIM).
 
-#data_dir <- "C:/Users/PGCST/Documents/Gabriela/SIM/DADOS_CID10_DBC"
-data_dir <- "./inst/extdata/SIM/DADOS_CID10/Rio_de_Janeiro"
+data_dir <- "C:/Users/PGCST/Documents/Gabriela/SIM/DADOS_CID10_DBC"
+#data_dir <- "./inst/extdata/SIM/DADOS_CID10/Rio_de_Janeiro"
 stopifnot(dir.exists(data_dir))
 
 
