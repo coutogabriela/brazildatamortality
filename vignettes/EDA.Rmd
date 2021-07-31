@@ -32,10 +32,45 @@ library(brazildatamortality)
 
 ```{r check_variables, include=FALSE}
 
-# Check that data before and after 1096 have the same variables and categories.
+# TODO: Make figures by job_name
+# TODO: Add the original age from the raw data.
 
-data_9  <- brazildatamortality::data_icd_9
-data_10 <- brazildatamortality::data_icd_10
+
+# Join job names.
+job_names_9  <- "/home/alber/Documents/github/brazildatamortality/data-raw/TABOCUP_cid9.DBF" %>% 
+  ensurer::ensure_that(file.exists(.), err_desc = "File not found") %>% 
+  foreign::read.dbf(as.is = TRUE) %>% 
+  tibble::as_tibble() %>% 
+  dplyr::rename(job = CODIGO,
+                job_name = DESCRICAO)
+job_names_10 <- "/home/alber/Documents/github/brazildatamortality/data-raw/TABOCUP_cid10.DBF" %>% 
+  ensurer::ensure_that(file.exists(.), err_desc = "File not found") %>% 
+  foreign::read.dbf() %>% 
+  tibble::as_tibble(as.is = TRUE) %>% 
+  dplyr::rename(job = CODIGO,
+                job_name = DESCRICAO)
+  
+# Check that data before and after 1996 have the same variables and categories.
+data_9  <- brazildatamortality::data_icd_9 %>% 
+  dplyr::left_join(job_names_9, by = "job")
+data_10 <- brazildatamortality::data_icd_10 %>% 
+  dplyr::left_join(job_names_10, by = "job")
+
+data_9 %>% 
+  dplyr::select(job, job_name) %>% 
+  dplyr::filter(is.na(job_name)) %>% 
+  dplyr::group_by(job) %>% 
+  dplyr::summarise(nas = n()) %>% 
+  dplyr::arrange(dplyr::desc(nas)) %>% 
+  readr::write_csv(file = "missing_job_codes_cid9.csv")
+                   
+data_10 %>% 
+  dplyr::select(job, job_name) %>% 
+  dplyr::filter(is.na(job_name)) %>% 
+  dplyr::group_by(job) %>% 
+  dplyr::summarise(nas = n()) %>% 
+  dplyr::arrange(dplyr::desc(nas)) %>% 
+  readr::write_csv(file = "missing_job_codes_cid10.csv")
 
 colnames(data_10) %>% sort()
 colnames(data_9)  %>% sort()
@@ -60,25 +95,25 @@ data_9  %>% sample_n(6) %>% pull(death_city) %>% unique() %>% sort()
 data_10 %>% sample_n(6) %>% pull(death_date) %>% unique() %>% sort()
 data_9  %>% sample_n(6) %>% pull(death_date) %>% unique() %>% sort()
 
-# TODO: Recode jobs.
+# DONE: Recode jobs.
 data_10 %>% sample_n(6) %>% pull(job) %>% unique() %>% sort()
 data_9  %>% sample_n(6) %>% pull(job) %>% unique() %>% sort()
 
-# TODO: Issue with Bachelor incomplete. 
-data_10 %>% pull(education) %>% unique() %>% sort()
-data_9  %>% pull(education) %>% unique() %>% sort()
-
-# TODO: What happened to hospital? (sid 10)
+# OK 
 data_10 %>% sample_n(6) %>% pull(locus) %>% unique() %>% sort()
 data_9  %>% sample_n(6) %>% pull(locus) %>% unique() %>% sort()
 
-# TODO: No information, other, ignored
+# OK
 data_10 %>% pull(marital) %>% unique() %>% sort()
 data_9  %>% pull(marital) %>% unique() %>% sort()
 
 # OK
 data_10 %>% pull(sex) %>% unique() %>% sort()
 data_9  %>% pull(sex) %>% unique() %>% sort()
+
+# OK
+data_10 %>% pull(education) %>% unique() %>% sort()
+data_9  %>% pull(education) %>% unique() %>% sort()
 
 ```
 
@@ -89,7 +124,9 @@ data_9  %>% pull(sex) %>% unique() %>% sort()
 data_10 <- data_10 %>% 
     dplyr::select(birth_date, cause, death_city, death_date, education, 
                   job, locus, marital, residence_city, sex, color_race, 
-                  literacy)
+                  literacy) %>% 
+  dplyr::mutate(education = if_else(education == "Barchelor incomplete",
+                                    "Barchelor", education))
 data_9  <- data_9  %>% 
     dplyr::select(birth_date, cause, death_city, death_date, education, 
                   job, locus, marital, residence_city, sex) %>% 
@@ -321,7 +358,7 @@ data_tb %>%
 
 ```{r plot_causes_esc_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
 
-# TODO: What do we do with the GAP from 1995 to 2012?
+# WARNING: There is a GAP from 1995 to 2012
 # The variables of CID9 and CID10 are not the same
 regular_data %>%
   dplyr::mutate(education = as.factor(education),
@@ -397,19 +434,14 @@ regular_data %>%
 
 ```{r cause_state, echo=FALSE, fig.width = 10, fig.height = 7}
 
+state_tb <- brazildatamortality::state_sf %>% 
+  sf::st_set_geometry(NULL) %>% 
+  dplyr::mutate(code_state = as.character(code_state))
 
-# Download the data.
-state_sf <- brazildatamortality::state_sf
-state_tb <- state_sf %>%
-  sf::st_set_geometry(NULL)
-
-town_sf <- brazildatamortality::town_sf
-town_tb <- town_sf %>%
-  sf::st_set_geometry(NULL)
 
 data_tb %>%
-  dplyr::left_join(town_tb, 
-                   by = c("death_city" = "code_muni")) %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
   dplyr::group_by(death_year, cause, abbrev_state) %>%
   dplyr::summarize(fatalities = dplyr::n(),
                    .groups = "drop") %>%
@@ -427,8 +459,8 @@ data_tb %>%
 
 # cumsum
 data_tb %>%
-  dplyr::left_join(town_tb, 
-                   by = c("death_city" = "code_muni")) %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
   dplyr::group_by(abbrev_state, cause, death_year) %>%
   dplyr::summarize(fatalities = dplyr::n()) %>%
   dplyr::mutate(cumsum = cumsum(fatalities)) %>%
@@ -450,7 +482,8 @@ data_tb %>%
 
 
 data_tb %>%
-  dplyr::left_join(town_tb, by = c("death_city" = "code_muni")) %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
   dplyr::group_by(death_year, cause, name_region) %>%
   dplyr::summarize(fatalities = dplyr::n(), 
                    .groups = "drop") %>%
@@ -468,8 +501,8 @@ data_tb %>%
 
 # cumsum
 data_tb %>%
-  dplyr::left_join(town_tb, 
-                   by = c("death_city" = "code_muni")) %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
   dplyr::group_by(name_region, cause, death_year) %>%
   dplyr::summarize(fatalities = dplyr::n()) %>%
   dplyr::mutate(cumsum = cumsum(fatalities)) %>%
@@ -501,8 +534,8 @@ data_tb %>%
   dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
                              "Cataclismyc and Floods", 
                              "Earth surface movement and Eruption")) %>%
-  dplyr::left_join(town_tb, 
-                   by = c("death_city" = "code_muni")) %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
   dplyr::group_by(name_region, cause, death_year) %>%
   dplyr::summarize(fatalities = dplyr::n()) %>%
   dplyr::mutate(cumsum = cumsum(fatalities)) %>%
@@ -521,8 +554,8 @@ data_tb %>%
   ggplot2::ggtitle("Deaths by cause by region")
 
 data_tb %>%
-  dplyr::left_join(town_tb, 
-                   by = c("death_city" = "code_muni")) %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
   dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
                              "Cataclismyc and Floods", 
                              "Earth surface movement and Eruption"),
@@ -552,59 +585,61 @@ data_tb %>%
 
 ```{r todo3, echo=FALSE, fig.width = 10, fig.height = 7}
 
-#+ maps by region? by state? which year?
-town_data <- data_tb %>%
-  dplyr::left_join(town_tb, 
-                   by = c("death_city" = "code_muni")) %>%
-  dplyr::group_by(death_city, cause) %>%
-  dplyr::summarize(fatalities = dplyr::n()) %>%
-  dplyr::ungroup() %>%
-  dplyr::mutate(cause = stringr::str_replace_all(cause, 
-                                                 pattern = " ",
-                                                 replacement = "_")) %>%
-  tidyr::pivot_wider(id_cols = death_city, 
-                     names_from = cause,
-                     values_from = fatalities)
+# TODO: Join by code_muni creates many NAs
+# #+ maps by region? by state? which year?
+# town_data <- data_tb %>%
+#   dplyr::left_join(town_tb, 
+#                    by = c("death_city" = "code_muni")) %>%
+#   dplyr::group_by(death_city, cause) %>%
+#   dplyr::summarize(fatalities = dplyr::n()) %>%
+#   dplyr::ungroup() %>%
+#   dplyr::mutate(cause = stringr::str_replace_all(cause, 
+#                                                  pattern = " ",
+#                                                  replacement = "_")) %>%
+#   tidyr::pivot_wider(id_cols = death_city, 
+#                      names_from = cause,
+#                      values_from = fatalities)
 
-my_region <- "Sudeste"
-town_sf %>%
-  sf::st_make_valid() %>% 
-  dplyr::select(code_muni) %>%
-  dplyr::mutate(code_muni = as.character(code_muni)) %>%
-  sf::st_centroid() %>% 
-  dplyr::left_join(town_tb, by = "code_muni") %>%
-  dplyr::left_join(town_data, by = c("code_muni" = "death_city")) %>%
-  dplyr::filter(name_region == my_region) %>%
-  ggplot2::ggplot() +
-  ggplot2::geom_sf(data = dplyr::filter(town_sf, 
-                                        name_region == my_region)) +
-  ggplot2::geom_sf(ggplot2::aes(color = Lightning, 
-                                size  = Lightning)) 
+# TODO: Join by code_muni creates many NAs
+# my_region <- "Sudeste"
+# town_sf %>%
+#   sf::st_make_valid() %>% 
+#   dplyr::select(code_muni) %>%
+#   dplyr::mutate(code_muni = as.character(code_muni)) %>%
+#   sf::st_centroid() %>% 
+#   dplyr::left_join(town_tb, by = "code_muni") %>%
+#   dplyr::left_join(town_data, by = c("code_muni" = "death_city")) %>%
+#   dplyr::filter(name_region == my_region) %>%
+#   ggplot2::ggplot() +
+#   ggplot2::geom_sf(data = dplyr::filter(town_sf, 
+#                                         name_region == my_region)) +
+#   ggplot2::geom_sf(ggplot2::aes(color = Lightning, 
+#                                 size  = Lightning)) 
 
-# State
-state_data <- data_tb %>%
-  dplyr::left_join(town_tb, 
-                    by = c("death_city" = "code_muni")) %>%
-  dplyr::group_by(abbrev_state, cause) %>%
-  dplyr::summarize(fatalities = dplyr::n()) %>%
-  dplyr::ungroup() %>%
-  dplyr::mutate(log_fatalities = log(fatalities))
-
-state_hex <- brazildatamortality::state_hex
-
-plot_sf <- merge(state_hex, state_data, 
-                 by = "abbrev_state",
-                 all.x = TRUE)
-plot_sf %>%
-  ggplot2::ggplot() +
-  ggplot2::geom_sf(data = state_hex) +
-  ggplot2::geom_sf_label(ggplot2::aes(label = abbrev_state))
-plot_sf %>%
-  ggplot2::ggplot() +
-  ggplot2::geom_sf(data = state_hex) +
-  ggplot2::geom_sf(ggplot2::aes(fill = log_fatalities), colour = NA) +
-  ggplot2::scale_fill_viridis_c(option = 'plasma') +
-  ggplot2::facet_wrap(~cause)
+# # State
+# state_data <- data_tb %>%
+#   dplyr::left_join(town_tb, 
+#                     by = c("death_city" = "code_muni")) %>%
+#   dplyr::group_by(abbrev_state, cause) %>%
+#   dplyr::summarize(fatalities = dplyr::n()) %>%
+#   dplyr::ungroup() %>%
+#   dplyr::mutate(log_fatalities = log(fatalities))
+# 
+# state_hex <- brazildatamortality::state_hex
+# 
+# plot_sf <- merge(state_hex, state_data, 
+#                  by = "abbrev_state",
+#                  all.x = TRUE)
+# plot_sf %>%
+#   ggplot2::ggplot() +
+#   ggplot2::geom_sf(data = state_hex) +
+#   ggplot2::geom_sf_label(ggplot2::aes(label = abbrev_state))
+# plot_sf %>%
+#   ggplot2::ggplot() +
+#   ggplot2::geom_sf(data = state_hex) +
+#   ggplot2::geom_sf(ggplot2::aes(fill = log_fatalities), colour = NA) +
+#   ggplot2::scale_fill_viridis_c(option = 'plasma') +
+#   ggplot2::facet_wrap(~cause)
 
 ```
 
@@ -632,8 +667,8 @@ data_tb %>%
   dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
                              "Cataclismyc and Floods", 
                              "Earth surface movement and Eruption")) %>%
-  dplyr::left_join(town_tb, 
-                   by = c("death_city" = "code_muni")) %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
   dplyr::select(name_region, cause, death_month) %>%
   tidyr::drop_na() %>%
   dplyr::mutate_all(as.factor) %>%
@@ -648,9 +683,6 @@ data_tb %>%
 ```
 
 
-
-TODO: make figure including
-+ design sex-analysis figure for outlier_data NOT using time series.
 
 ## Conclusions.
 
