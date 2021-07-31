@@ -616,30 +616,63 @@ data_tb %>%
 #   ggplot2::geom_sf(ggplot2::aes(color = Lightning, 
 #                                 size  = Lightning)) 
 
-# # State
-# state_data <- data_tb %>%
-#   dplyr::left_join(town_tb, 
-#                     by = c("death_city" = "code_muni")) %>%
-#   dplyr::group_by(abbrev_state, cause) %>%
-#   dplyr::summarize(fatalities = dplyr::n()) %>%
-#   dplyr::ungroup() %>%
-#   dplyr::mutate(log_fatalities = log(fatalities))
-# 
-# state_hex <- brazildatamortality::state_hex
-# 
-# plot_sf <- merge(state_hex, state_data, 
-#                  by = "abbrev_state",
-#                  all.x = TRUE)
-# plot_sf %>%
-#   ggplot2::ggplot() +
-#   ggplot2::geom_sf(data = state_hex) +
-#   ggplot2::geom_sf_label(ggplot2::aes(label = abbrev_state))
-# plot_sf %>%
-#   ggplot2::ggplot() +
-#   ggplot2::geom_sf(data = state_hex) +
-#   ggplot2::geom_sf(ggplot2::aes(fill = log_fatalities), colour = NA) +
-#   ggplot2::scale_fill_viridis_c(option = 'plasma') +
-#   ggplot2::facet_wrap(~cause)
+# State
+state_data <- data_tb %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::group_by(abbrev_state, cause) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::ungroup()
+
+state_hex <- brazildatamortality::state_hex
+ 
+plot_sf <- merge(state_hex, state_data,
+                 by = "abbrev_state",
+                 all.x = TRUE)
+plot_sf %>%
+  ggplot2::ggplot() +
+  ggplot2::geom_sf(data = state_hex) +
+  ggplot2::geom_sf_label(ggplot2::aes(label = abbrev_state))
+plot_sf %>%
+  ggplot2::ggplot() +
+  ggplot2::geom_sf(data = state_hex) +
+  ggplot2::geom_sf(ggplot2::aes(fill = log10(fatalities)), colour = NA) +
+  ggplot2::scale_fill_viridis_c(option = 'plasma') +
+  ggplot2::facet_wrap(~cause)
+
+```
+
+
+```{r map_by_year, echo=FALSE}
+
+hydrogeo_causes <- c("Cataclismyc", 
+                     "Cataclismyc and Floods",
+                     "Earth surface and Eruption",
+                     "Flood",
+                     "Landslide",
+                     "Earthquake")
+for (y in c(seq(from = 1980, to = 2015, by = 5), 2019)) {
+  state_year_data <- data_tb %>%
+    dplyr::mutate(death_year = lubridate::year(death_date)) %>% 
+    dplyr::filter(cause %in% hydrogeo_causes,
+                  death_year <= y) %>% 
+    dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+    dplyr::left_join(state_tb, by = "code_state") %>% 
+    dplyr::group_by(abbrev_state) %>%
+    dplyr::summarise(fatalities = dplyr::n()) %>% 
+    dplyr::ungroup()
+    plot_sf <- merge(state_hex, state_year_data,
+                   by = "abbrev_state",
+                   all.x = TRUE)
+  my_plot <- plot_sf %>% 
+    ggplot2::ggplot() +
+    ggplot2::geom_sf(data = state_hex) +
+    ggplot2::geom_sf(ggplot2::aes(fill = log10(fatalities)), colour = NA) +
+    viridis::scale_fill_viridis(limits = c(0, 4), oob = scales::squish) +
+    #ggplot2::geom_sf_label(ggplot2::aes(label = fatalities)) + 
+    ggplot2::ggtitle(sprintf("Hydro-geological deaths until %s", y))
+  print(my_plot)
+} 
 
 ```
 
