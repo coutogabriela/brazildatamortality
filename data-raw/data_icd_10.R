@@ -16,8 +16,8 @@ library(usethis)
 # Ministerio da saude do Brasil.
 # Sistema de Informação sobre Mortalidade (SIM).
 
-data_dir <- "C:/Users/PGCST/Documents/Gabriela/SIM/DADOS_CID10_DBC"
-#data_dir <- "./inst/extdata/SIM/DADOS_CID10/Rio_de_Janeiro"
+#data_dir <- "C:/Users/PGCST/Documents/Gabriela/SIM/DADOS_CID10_DBC"
+data_dir <- "./inst/extdata/SIM/DADOS_CID10/Rio_de_Janeiro"
 stopifnot(dir.exists(data_dir))
 
 
@@ -121,6 +121,16 @@ data_icd_10 <- raw_data_tb %>%
                                              "4" = "Mixed",
                                              "5" = "Indigenous",
                                              .default = NA_character_)) %>%
+    tidyr::separate(IDADE, into = c("age_unit", "age_value"), sep = 1) %>%
+    dplyr::mutate(age_unit = dplyr::recode(age_unit,
+                                           "1" = "Minutes",
+                                           "2" = "Hours",
+                                           "3" = "Months",
+                                           "4" = "Years",
+                                           "5" = "> 100 years",
+                                           "9" = "Ignored",
+                                           .default = NA_character_,
+                                           .missing = NA_character_)) %>%
     dplyr::select(birth_date,
                   cause,
                   residence_city = CODMUNRES,
@@ -132,7 +142,9 @@ data_icd_10 <- raw_data_tb %>%
                   literacy,
                   locus,
                   marital,
-                  sex)
+                  sex,
+                  age_unit,
+                  age_value)
 
     usethis::use_data(data_icd_10,
                       overwrite = TRUE)
