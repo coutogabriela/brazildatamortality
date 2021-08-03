@@ -35,49 +35,34 @@ library(brazildatamortality)
 # TODO: Make figures by job_name
 # TODO: Add the original age from the raw data.
 
+# TODO: Fix jobs. There is more than one jobs description for each job code.
+# # Join job names.
+# job_names_9  <- "/home/alber/Documents/github/brazildatamortality/data-raw/TABOCUP_cid9.DBF" %>% 
+#   ensurer::ensure_that(file.exists(.), err_desc = "File not found") %>% 
+#   foreign::read.dbf(as.is = TRUE) %>% 
+#   tibble::as_tibble() %>% 
+#   dplyr::rename(job = CODIGO,
+#                 job_name = DESCRICAO)
+# job_names_10 <- "/home/alber/Documents/github/brazildatamortality/data-raw/TABOCUP_cid10.DBF" %>% 
+#   ensurer::ensure_that(file.exists(.), err_desc = "File not found") %>% 
+#   foreign::read.dbf() %>% 
+#   tibble::as_tibble(as.is = TRUE) %>% 
+#   dplyr::rename(job = CODIGO,
+#                 job_name = DESCRICAO)
+#   
+# # Check that data before and after 1996 have the same variables and categories.
+# data_9  <- brazildatamortality::data_icd_9 %>% 
+#   dplyr::left_join(job_names_9, by = "job")
+# data_10 <- brazildatamortality::data_icd_10 %>% 
+#   dplyr::left_join(job_names_10, by = "job")
 
-# Join job names.
-job_names_9  <- "/home/alber/Documents/github/brazildatamortality/data-raw/TABOCUP_cid9.DBF" %>% 
-  ensurer::ensure_that(file.exists(.), err_desc = "File not found") %>% 
-  foreign::read.dbf(as.is = TRUE) %>% 
-  tibble::as_tibble() %>% 
-  dplyr::rename(job = CODIGO,
-                job_name = DESCRICAO)
-job_names_10 <- "/home/alber/Documents/github/brazildatamortality/data-raw/TABOCUP_cid10.DBF" %>% 
-  ensurer::ensure_that(file.exists(.), err_desc = "File not found") %>% 
-  foreign::read.dbf() %>% 
-  tibble::as_tibble(as.is = TRUE) %>% 
-  dplyr::rename(job = CODIGO,
-                job_name = DESCRICAO)
-  
-# Check that data before and after 1996 have the same variables and categories.
-data_9  <- brazildatamortality::data_icd_9 %>% 
-  dplyr::left_join(job_names_9, by = "job")
-data_10 <- brazildatamortality::data_icd_10 %>% 
-  dplyr::left_join(job_names_10, by = "job")
 
-data_9 %>% 
-  dplyr::select(job, job_name) %>% 
-  dplyr::filter(is.na(job_name)) %>% 
-  dplyr::group_by(job) %>% 
-  dplyr::summarise(nas = n()) %>% 
-  dplyr::arrange(dplyr::desc(nas)) %>% 
-  readr::write_csv(file = "missing_job_codes_cid9.csv")
-                   
-data_10 %>% 
-  dplyr::select(job, job_name) %>% 
-  dplyr::filter(is.na(job_name)) %>% 
-  dplyr::group_by(job) %>% 
-  dplyr::summarise(nas = n()) %>% 
-  dplyr::arrange(dplyr::desc(nas)) %>% 
-  readr::write_csv(file = "missing_job_codes_cid10.csv")
+data_9  <- brazildatamortality::data_icd_9
+data_10 <- brazildatamortality::data_icd_10
 
 colnames(data_10) %>% sort()
 colnames(data_9)  %>% sort()
 
-# OK
-data_10 %>% sample_n(6) %>% pull(birth_date) %>% unique() %>% sort()
-data_9  %>% sample_n(6) %>% pull(birth_date) %>% unique() %>% sort()
 
 # NOTE: They don't math too much because data before 1996 is deficient. 
 data_10 %>% pull(cause) %>% unique() %>% sort()
@@ -91,13 +76,18 @@ data_9  %>% sample_n(6) %>% pull(residence_city) %>% unique() %>% sort()
 data_10 %>% sample_n(6) %>% pull(death_city) %>% unique() %>% sort()
 data_9  %>% sample_n(6) %>% pull(death_city) %>% unique() %>% sort()
 
+# DONE: Recode jobs.
+data_10 %>% sample_n(6) %>% pull(job) %>% unique() %>% sort()
+data_9  %>% sample_n(6) %>% pull(job) %>% unique() %>% sort()
+
+# OK
+data_10 %>% sample_n(6) %>% pull(birth_date) %>% unique() %>% sort()
+data_9  %>% sample_n(6) %>% pull(birth_date) %>% unique() %>% sort()
+
 # OK
 data_10 %>% sample_n(6) %>% pull(death_date) %>% unique() %>% sort()
 data_9  %>% sample_n(6) %>% pull(death_date) %>% unique() %>% sort()
 
-# DONE: Recode jobs.
-data_10 %>% sample_n(6) %>% pull(job) %>% unique() %>% sort()
-data_9  %>% sample_n(6) %>% pull(job) %>% unique() %>% sort()
 
 # OK 
 data_10 %>% sample_n(6) %>% pull(locus) %>% unique() %>% sort()
@@ -121,25 +111,7 @@ data_9  %>% pull(education) %>% unique() %>% sort()
 
 ```{r merge_both_data, include=FALSE}
 
-data_10 <- data_10 %>% 
-    dplyr::select(birth_date, cause, death_city, death_date, education, 
-                  job, locus, marital, residence_city, sex, color_race, 
-                  literacy) %>% 
-  dplyr::mutate(education = if_else(education == "Barchelor incomplete",
-                                    "Barchelor", education))
-data_9  <- data_9  %>% 
-    dplyr::select(birth_date, cause, death_city, death_date, education, 
-                  job, locus, marital, residence_city, sex) %>% 
-    dplyr::mutate(color_race = NA,
-                  literacy = NA)
-
-data_tb <- data_9 %>%
-  dplyr::bind_rows(data_10) %>%
-  dplyr::mutate(death_year = lubridate::year(death_date),
-                computed_age = difftime(death_date, birth_date, 
-                                        units = "days"),
-                death_month = as.integer(lubridate::month(death_date))) %>%
-  tidyr::drop_na(cause, death_date)
+data_tb <- get_data()
 
 outlier_data <- data_tb %>%
   dplyr::filter(death_date > as.Date("2011-01-10"),
@@ -191,271 +163,11 @@ regular_data <- data_tb %>%
 ```
 
 
-```{r plot_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
-
-regular_data %>%
-  dplyr::group_by(death_year) %>%
-  dplyr::summarize(fatalities = dplyr::n(), 
-                   .groups = "drop") %>%
-  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
-  dplyr::arrange(death_year) %>%
-  ggplot2::ggplot(ggplot2::aes(x = death_year,
-                               y = cumsum)) +
-  ggplot2::geom_point() +
-  ggplot2::geom_line() +
-  ggplot2::xlab("Year") +
-  ggplot2::ylab("Accumulated number of fatalities") +
-  ggplot2::ggtitle("Cumulative number of deaths by forces of nature")
-
-
-```
-
-```{r plot_causes_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
-
-regular_data %>%
-  dplyr::group_by(cause, death_year) %>%
-  dplyr::summarize(fatalities = dplyr::n()) %>%
-  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
-  dplyr::ungroup() %>%
-  dplyr::arrange(cause, death_year) %>%
-  ggplot2::ggplot(ggplot2::aes(x = death_year,
-                               y = cumsum,
-                               color = cause,
-                               group = cause)) +
-  ggplot2::geom_point() +
-  ggplot2::geom_line() +
-  ggplot2::xlab("Year") +
-  ggplot2::ylab("Cumulative number of fatalities") +
-  ggplot2::ggtitle("Cumulative sum of deaths by cause")
-
-```
-
-```{r plot_total, echo=FALSE, fig.width = 7, fig.height = 5}
-
-regular_data %>%
-  dplyr::group_by(death_year) %>%
-  dplyr::summarize(fatalities = dplyr::n(), 
-                   .groups = "drop") %>%
-  dplyr::mutate(moving_average = RcppRoll::roll_mean(fatalities, 
-                                                     n = 5, 
-                                                     align = "right", 
-                                                     fill = NA,
-                                                     na.rm = TRUE))  %>%
-  dplyr::arrange(death_year) %>%
-  ggplot2::ggplot(ggplot2::aes(x = death_year,
-                               y = fatalities)) +
-  ggplot2::geom_point() +
-  ggplot2::geom_line(ggplot2::aes(x = death_year,
-                                  y = moving_average),
-                                  color = "blue") +
-  ggplot2::xlab("Year") +
-  ggplot2::ylab("Number of fatalities") +
-  ggplot2::ggtitle("Total number of deaths by forces of nature")
-
-```
-
-```{r plot_causes_sex_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
-
-regular_data %>%
-  dplyr::filter(sex %in% c("Male", "Female")) %>%
-  dplyr::group_by(sex, cause, death_year) %>%
-  dplyr::arrange(sex, cause, death_year) %>%
-  dplyr::summarize(fatalities = dplyr::n()) %>%
-  dplyr::filter(cause %in% c("Cataclismyc", 
-                             "Cataclismyc and Floods",
-                             "Cold", 
-                             "Lightning", 
-                             "Landslide")) %>%
-  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
-  dplyr::ungroup() %>%
-  ggplot2::ggplot(ggplot2::aes(x = death_year,
-                               y = cumsum,
-                               color = cause,
-                               group = cause)) +
-  ggplot2::geom_point() +
-  ggplot2::geom_line() +
-  ggplot2::facet_wrap(~sex) +
-  ggplot2::xlab("Year") +
-  ggplot2::ylab("Cumulative number of fatalities by sex") +
-  ggplot2::ggtitle("Cumulative sum of deaths by cause and sex")
-
-regular_data %>%
-  dplyr::filter(sex %in% c("Male", "Female")) %>%
-  dplyr::group_by(sex, cause, death_year) %>%
-  dplyr::arrange(sex, cause, death_year) %>%
-  dplyr::summarize(fatalities = dplyr::n()) %>%
-  dplyr::filter(!(cause %in% c("Cataclismyc", 
-                             "Cataclismyc and Floods",
-                             "Cold", 
-                             "Lightning", 
-                             "Landslide"))) %>%
-  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
-  dplyr::ungroup() %>%
-  ggplot2::ggplot(ggplot2::aes(x = death_year,
-                               y = cumsum,
-                               color = cause,
-                               group = cause)) +
-  ggplot2::geom_point() +
-  ggplot2::geom_line() +
-  ggplot2::facet_wrap(~sex) +
-  ggplot2::xlab("Year") +
-  ggplot2::ylab("Cumulative number of fatalities by sex") +
-  ggplot2::ggtitle("Cumulative sum of deaths by cause and sex")
-
-```
-
-```{r plot_causes, echo=FALSE, fig.width = 7, fig.height = 5}
-
-# High impact
-data_tb %>%
-  dplyr::group_by(cause, death_year) %>%
-  dplyr::summarize(fatalities = dplyr::n(), 
-                   .groups = "drop") %>%
-  dplyr::arrange(cause, death_year) %>%
-  dplyr::filter(cause %in% c("Cataclismyc",
-                             "Cataclismyc and Floods", 
-                             "Flood",
-                             "Landslide",
-                             "Lightning")) %>%             
-  dplyr::filter(!is.na(cause), !is.na(death_year)) %>%
-  ggplot2::ggplot(ggplot2::aes(x = death_year,
-                               y = fatalities,
-                               color = cause,
-                               group = cause)) +
-  ggplot2::geom_point() +
-  ggplot2::geom_line() +
-  ggplot2::xlab("Year") +
-  ggplot2::ylab("Number of fatalities") +
-  ggplot2::ggtitle("Death by cause") + 
-  ggplot2::scale_color_brewer(palette = "Paired")
-
-# Low impact
-data_tb %>%
-  dplyr::group_by(cause, death_year) %>%
-  dplyr::summarize(fatalities = dplyr::n(), 
-                   .groups = "drop") %>%
-  dplyr::arrange(cause, death_year) %>%
-  dplyr::filter(!(cause %in% c("Cataclismyc",
-                             "Cataclismyc and Floods", 
-                             "Flood",
-                             "Landslide",
-                             "Lightning"))) %>%             
-  dplyr::filter(!is.na(cause), !is.na(death_year)) %>%
-  ggplot2::ggplot(ggplot2::aes(x = death_year,
-                               y = fatalities,
-                               color = cause,
-                               group = cause)) +
-  ggplot2::geom_point() +
-  ggplot2::geom_line() +
-  ggplot2::xlab("Year") +
-  ggplot2::ylab("Number of fatalities") +
-  ggplot2::ggtitle("Death by cause") + 
-  ggplot2::scale_color_brewer(palette = "Paired")
-
-```
-
-
-
-```{r plot_causes_esc_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
-
-# WARNING: There is a GAP from 1995 to 2012
-# The variables of CID9 and CID10 are not the same
-regular_data %>%
-  dplyr::mutate(education = as.factor(education),
-                cause     = as.factor(cause)) %>%
-  tidyr::drop_na(education) %>%
-  dplyr::group_by(education, cause, death_year) %>%
-  dplyr::arrange(education, cause, death_year) %>%
-  dplyr::summarize(fatalities = dplyr::n()) %>%
-  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
-  dplyr::ungroup() %>%
-  ggplot2::ggplot(ggplot2::aes(x = death_year,
-                               y = cumsum,
-                               color = cause,
-                               group = cause)) +
-  ggplot2::geom_point() +
-  ggplot2::geom_line() +
-  #ggplot2::scale_color_brewer(palette = "Spectral") + 
-  #ggplot2::scale_colour_viridis_d(option = "plasma") +
-  ggplot2::facet_wrap(~education) +
-  ggplot2::xlab("Year") +
-  ggplot2::ylab("Cumulative number of fatalities by education") +
-  ggplot2::ggtitle("Cumulative sum of deaths by cause and education")
-
-```
-
-
-```{r plot_by_cause, echo=FALSE, fig.width = 7, fig.height = 5}
-
-regular_data %>%
-  dplyr::group_by(death_year, cause) %>%
-  dplyr::summarize(fatalities = log(dplyr::n()),
-                   .groups = "drop") %>%
-  # NOTE: Util function for adding the roll means as a new column.
-  (function(x) {
-    my_data <- x %>%
-      dplyr::arrange(death_year, cause) %>%
-      tidyr::pivot_wider(id_cols = death_year,
-                         names_from = cause,
-                         values_from = fatalities)
-    my_roll <- RcppRoll::roll_mean(as.matrix(dplyr::select(my_data, 
-                                                           -death_year)),
-                                   n = 5,
-                                   align = "right",
-                                   fill = NA,
-                                   na.rm = TRUE) %>%
-      tibble::as_tibble() %>%
-      magrittr::set_names(paste(names(.), "roll_mean", sep = "_")) %>%
-      dplyr::mutate(death_year = my_data$death_year) %>%
-      tidyr::pivot_longer(!death_year) %>%
-      dplyr::rename(moving_average = value)
-   my_data %>%
-     tidyr::pivot_longer(!death_year,
-                         names_to = "cause",
-                         values_to = "fatalities") %>%
-     dplyr::bind_cols(dplyr::select(my_roll, moving_average)) %>%
-     return()
-  }) %>%
-  dplyr::arrange(death_year) %>%
-  ggplot2::ggplot(ggplot2::aes(x = death_year,
-                               y = fatalities)) +
-  ggplot2::geom_point() +
-  ggplot2::geom_line(ggplot2::aes(x = death_year,
-                                  y = moving_average),
-                                  color = "blue") +
-  ggplot2::facet_wrap(~cause,
-                      ncol = 3) +
-  ggplot2::xlab("Year") +
-  ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggplot2::ylab("Logarithm of the number of fatalities") +
-  ggplot2::ggtitle("Number of deaths by forces of nature by cause")
-
-```
-
 ```{r cause_state, echo=FALSE, fig.width = 10, fig.height = 7}
 
 state_tb <- brazildatamortality::state_sf %>% 
   sf::st_set_geometry(NULL) %>% 
   dplyr::mutate(code_state = as.character(code_state))
-
-
-data_tb %>%
-  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
-  dplyr::left_join(state_tb, by = "code_state") %>% 
-  dplyr::group_by(death_year, cause, abbrev_state) %>%
-  dplyr::summarize(fatalities = dplyr::n(),
-                   .groups = "drop") %>%
-  tidyr::drop_na() %>%
-  ggplot2::ggplot(ggplot2::aes(x = death_year,
-                               y = fatalities, 
-                               color = cause, 
-                               group = cause)) +
-  ggplot2::geom_point() +
-  ggplot2::geom_line() +
-  ggplot2::facet_wrap(vars(abbrev_state)) +
-  ggplot2::xlab("Year") +
-  ggplot2::ylab("Number of fatalities") +
-  ggplot2::ggtitle("Deaths by cause by state")
 
 # cumsum
 data_tb %>%
@@ -481,6 +193,7 @@ data_tb %>%
   ggplot2::ggtitle("Deaths by cause by state")
 
 
+# TODO: Gabriela check if this figure works.
 data_tb %>%
   dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
   dplyr::left_join(state_tb, by = "code_state") %>% 
@@ -499,6 +212,7 @@ data_tb %>%
   ggplot2::ylab("Number of fatalities") +
   ggplot2::ggtitle("Deaths by cause by region")
 
+# TODO: Gabriela check if this figure works.
 # cumsum
 data_tb %>%
   dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
@@ -526,9 +240,8 @@ data_tb %>%
 
 ```{r todo1, echo=FALSE, fig.width = 10, fig.height = 7}
 
-# + data_10 cataclismyc, flood, and landslide
-# + data_9 cataclismyc & floods, and Earth surface movement.
 
+# TODO: Gabriela check if this figure works.
 # NOTE: The increment of deaths by landslide in the Sudeste region.
 data_tb %>%
   dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
@@ -553,6 +266,7 @@ data_tb %>%
   ggplot2::ylab("Cumulative number of fatalities (log)") +
   ggplot2::ggtitle("Deaths by cause by region")
 
+# TODO: Gabriela check if this figure works.
 data_tb %>%
   dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
   dplyr::left_join(state_tb, by = "code_state") %>% 
@@ -682,6 +396,7 @@ for (y in c(seq(from = 1980, to = 2015, by = 5), 2019)) {
 # + Add figure of low impact death causes by season (x = month, 
 # y = number of fatalities, color = cause).
 
+# TODO: Gabriela check if this figure works.
 data_tb %>%
   dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
                              "Cataclismyc and Floods", 
@@ -696,6 +411,7 @@ data_tb %>%
   ggplot2::ylab("Number of fatalities") +
   ggplot2::ggtitle("Deaths by cause by month")
 
+# TODO: Gabriela check if this figure works.
 data_tb %>%
   dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
                              "Cataclismyc and Floods", 
