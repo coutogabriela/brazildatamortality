@@ -429,6 +429,43 @@ data_tb %>%
   ggplot2::ylab("Number of fatalities") +
   ggplot2::ggtitle("Deaths by cause by region and month")
 
+# TODO: Gabriela check if this figure works.
+data_tb %>%
+  dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
+                             "Cataclismyc and Floods", 
+                             "Earth surface movement and Eruption")) %>%
+  dplyr::group_by(week = lubridate::week(death_date),
+                  wday = lubridate::wday(death_date)) %>%
+  dplyr::summarise(log10_sum_deaths = log10(dplyr::n())) %>% 
+  ggplot2::ggplot(ggplot2::aes(x = week, 
+                               y = wday, 
+                               fill = log10_sum_deaths)) +
+  ggplot2::geom_tile(alpha = 0.8) +
+  ggplot2::scale_fill_viridis_c() +
+  ggplot2::ggtitle("Log10 of the cumulative sum of deaths by week and day of the week")
+                    
+  
+# TODO: Gabriela check if this figure works.
+data_tb %>%
+  dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
+                             "Cataclismyc and Floods", 
+                             "Earth surface movement and Eruption")) %>%
+  dplyr::group_by(week = lubridate::week(death_date),
+                  wday = lubridate::wday(death_date),
+                  death_year) %>%
+  dplyr::summarise(n_deaths = dplyr::n()) %>% 
+  dplyr::ungroup() %>%
+  dplyr::group_by(week, wday) %>%
+  dplyr::summarise(median_deaths = median(n_deaths)) %>% 
+  ggplot2::ggplot(ggplot2::aes(x = week, 
+                               y = wday, 
+                               fill = median_deaths)) +
+  ggplot2::geom_tile(alpha = 0.8) +
+  ggplot2::scale_fill_viridis_c() +
+  ggplot2::ggtitle("Median of the cumulative sum of deaths by week and day of the week")
+                    
+
+
 ```
 
 
