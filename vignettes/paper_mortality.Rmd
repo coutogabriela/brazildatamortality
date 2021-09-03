@@ -1,0 +1,312 @@
+---
+title: "Figures for the paper"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{paper_mortality}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, include=FALSE}
+
+library(brazildatamortality)
+library(dplyr)
+library(ggplot2)
+
+data_tb <- get_data()
+
+```
+
+```{r data, include=FALSE}
+
+# Deaths by hydro-geological events and extreme temperatures.
+hydrogeo_extemp_tb <- data_tb %>% 
+  dplyr::filter(!(cause %in% c("Lightning",
+                               "Sunlight",
+                               "Volcano",
+                               "Other")))
+
+serrana_interval <- list(lubridate::as_date("2011-01-01"),
+                         lubridate::as_date("2011-12-31") )
+
+serrana_tb <- hydrogeo_extemp_tb %>%
+  dplyr::mutate(state_death_id = stringr::str_sub(death_city, 1, 2)) %>%
+  dplyr::filter(death_date >= serrana_interval[[1]],
+                death_date <  serrana_interval[[2]], 
+                cause %in% c("Cataclismyc", "Landslide"),
+                state_death_id %in% "33") %>% 
+  dplyr::select(-state_death_id)
+
+# Remove the deaths caused by the Serrana Tragedy.
+hydrogeo_extemp_no_serrana_tb <- hydrogeo_extemp_tb %>%
+  dplyr::mutate(state_death_id = stringr::str_sub(death_city, 1, 2)) %>%
+  dplyr::filter(
+    !death_date >= serrana_interval[[1]]      |
+    !death_date <  serrana_interval[[2]]      | 
+    !cause %in% c("Cataclismyc", "Landslide") |
+    !state_death_id %in% "33"
+    ) %>% 
+  dplyr::select(-state_death_id)
+  
+stopifnot(nrow(hydrogeo_extemp_tb) == nrow(serrana_tb) + nrow(hydrogeo_extemp_no_serrana_tb))
+
+```
+
+
+## Mortality pie
+
+```{r fig_mortality_pie, echo=FALSE, fig.width = 10, fig.height = 7}
+
+data_tb %>%
+  dplyr::count(cause) %>%
+  dplyr::arrange(dplyr::desc(n)) %>%
+  dplyr::mutate(cause_fct = factor(cause, 
+                                   levels = rev(.$cause)),
+                proportion = round(100 * (n / sum(n)), 
+                                   digits = 1)) %>%
+  # TODO: Fix the labels' positions
+  #dplyr::mutate(ypos = cumsum(proportion) - 0.5 * proportion) %>%
+  dplyr::mutate(ypos = c(27.8, 65.4, 81.8, 90.1, 93.4, 95.6, 
+                         97.4, 98.6, 99.2,  99.6, 99, 100)) %>%
+  ggplot2::ggplot(ggplot2::aes(x = "", y = proportion, fill = cause_fct)) +
+  ggplot2::geom_bar(stat = "identity", width = 1, color = "white") +
+  ggplot2::coord_polar("y", start = 0) +
+  ggplot2::theme(legend.position = "none") +
+  #ggplot2::scale_fill_brewer(palette = "Set1") +
+  ggplot2::geom_text(ggplot2::aes(y = ypos,  label = proportion), 
+                      color = "white", size = 3) +
+  ggplot2::theme_void() 
+
+```
+
+
+
+## Number of deaths by hydro-geo and ext temp events w/o 2011 tragedy
+
+```{r fig_log, echo=FALSE, fig.width = 10, fig.height = 7}
+
+hydrogeo_extemp_no_serrana_tb %>%
+  dplyr::mutate(cause = dplyr::recode(
+    cause,
+    "Earth surface movement and Eruption" = "Earth movement",
+    "Heat"                                = "Heat",
+    "Cataclismyc and Floods"              = "Storm",
+    "Cold"                                = "Cold",
+    "Landslide"                           = "Earth movement",
+    "Cataclismyc"                         = "Storm",                       
+    "Flood"                               = "Storm",
+    "Earthquake"                          = "Earth movement"
+  )) %>%
+    dplyr::group_by(death_year, cause) %>%
+    dplyr::summarize(fatalities = log(dplyr::n()),
+                     .groups = "drop") %>%
+    # NOTE: Util function for adding the roll means as a new column.
+    (function(x) {
+        my_data <- x %>%
+            dplyr::arrange(death_year, cause) %>%
+            tidyr::pivot_wider(id_cols = death_year,
+                               names_from = cause,
+                               values_from = fatalities)
+        my_roll <- RcppRoll::roll_mean(as.matrix(dplyr::select(my_data, 
+                                                               -death_year)),
+                                       n = 5,
+                                       align = "right",
+                                       fill = NA,
+                                       na.rm = TRUE) %>%
+            tibble::as_tibble() %>%
+            magrittr::set_names(paste(names(.), "roll_mean", sep = "_")) %>%
+            dplyr::mutate(death_year = my_data$death_year) %>%
+            tidyr::pivot_longer(!death_year) %>%
+            dplyr::rename(moving_average = value)
+        my_data %>%
+            tidyr::pivot_longer(!death_year,
+                                names_to = "cause",
+                                values_to = "fatalities") %>%
+            dplyr::bind_cols(dplyr::select(my_roll, moving_average)) %>%
+            return()
+    }) %>%
+    dplyr::arrange(death_year) %>%
+    ggplot2::ggplot(ggplot2::aes(x = death_year,
+                                 y = fatalities)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line(ggplot2::aes(x = death_year,
+                                    y = moving_average),
+                       color = "blue") +
+    ggplot2::facet_wrap(~cause,
+                        ncol = 3) +
+    ggplot2::xlab("Year") +
+    ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ggplot2::ylab("Logarithm of the number of fatalities") +
+    ggplot2::ggtitle("Number of deaths by hydro-geo and ext temp events w/o 2011 tragedy")
+
+```
+
+
+
+## Cumulative number of deaths due to hydro-geo and extreme temperature events without 2011 tragedy (Serrana)
+
+```{r fig_cum, echo=FALSE, fig.width = 10, fig.height = 7}
+
+hydrogeo_extemp_no_serrana_tb %>%
+  dplyr::mutate(cause = dplyr::recode(
+    cause,
+    "Earth surface movement and Eruption" = "geohydro",
+    "Heat"                                = "extreme temperature",
+    "Cataclismyc and Floods"              = "geohydro",
+    "Cold"                                = "extreme temperature",
+    "Landslide"                           = "geohydro",
+    "Cataclismyc"                         = "geohydro",                       
+    "Flood"                               = "geohydro",
+    "Earthquake"                          = "geohydro"
+  )) %>% 
+    dplyr::group_by(death_year, cause) %>%
+    dplyr::summarize(fatalities = dplyr::n(), 
+                     .groups = "drop") %>% 
+  (function(x) {
+    total_year <- x %>%
+      dplyr::group_by(death_year) %>%
+      dplyr::summarize(fatalities = sum(fatalities),
+                       .groups = "drop") %>%
+      dplyr::mutate(cause = "total_year") %>%
+      dplyr::select(death_year, cause, fatalities)
+    x %>% 
+      dplyr::bind_rows(total_year) %>%
+      dplyr::arrange(death_year, cause) %>% 
+      return()
+  }) %>%
+  dplyr::group_by(cause) %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+  dplyr::ungroup() %>%
+    dplyr::arrange(death_year) %>%
+  
+    ggplot2::ggplot(ggplot2::aes(x = death_year,
+                                 y = cumsum, 
+                                 color = cause)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line() +
+    ggplot2::xlab("Year") +
+    ggplot2::ylab("Cumulative number of fatalities") +
+    ggplot2::ggtitle("Cumulative number of deaths due to hydro-geo and ext temp events w/o 2011 tragedy")
+
+```
+
+
+
+## Map by state
+
+```{r map_state_cum, echo=FALSE, fig.width = 10, fig.height = 7}
+
+state_tb <- brazildatamortality::state_sf %>% 
+  sf::st_set_geometry(NULL) %>% 
+  dplyr::mutate(code_state = as.character(code_state))
+
+state_data <- hydrogeo_extemp_no_serrana_tb %>%
+  dplyr::mutate(cause = dplyr::recode(
+    cause,
+    "Earth surface movement and Eruption" = "geohydro",
+    "Heat"                                = "extreme temperature",
+    "Cataclismyc and Floods"              = "geohydro",
+    "Cold"                                = "extreme temperature",
+    "Landslide"                           = "geohydro",
+    "Cataclismyc"                         = "geohydro",                       
+    "Flood"                               = "geohydro",
+    "Earthquake"                          = "geohydro"
+  )) %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::group_by(abbrev_state, cause) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::ungroup()
+
+state_hex <- brazildatamortality::state_hex
+ 
+plot_sf <- merge(state_hex, state_data,
+                 by = "abbrev_state",
+                 all.x = TRUE)
+
+# Plot the states' names
+plot_sf %>%
+  ggplot2::ggplot() +
+  ggplot2::geom_sf(data = state_hex) +
+  ggplot2::geom_sf_label(ggplot2::aes(label = abbrev_state))
+
+plot_sf %>%
+  ggplot2::ggplot() +
+  ggplot2::geom_sf(data = state_hex) +
+  ggplot2::geom_sf(ggplot2::aes(fill = log10(fatalities)), colour = NA) +
+  ggplot2::scale_fill_viridis_c(option = 'plasma') +
+  ggplot2::facet_wrap(~cause)
+
+```
+
+
+## Fatalities by season by year
+
+
+```{r fig_season_cum_year, echo=FALSE, fig.width = 10, fig.height = 7}
+
+hydrogeo_extemp_no_serrana_tb %>%
+  dplyr::mutate(death_season = dplyr::case_when(
+    death_month %in% c(12, 1, 2)  ~ "summer",
+    death_month %in% c(3, 4, 5)   ~ "fall",
+    death_month %in% c(6, 7, 8)   ~ "winter",
+    death_month %in% c(9, 10, 11) ~ "spring"
+  )) %>%
+  dplyr::group_by(death_year, death_season) %>%
+  dplyr::summarize(fatalities = dplyr::n(),
+                   .groups = "drop") %>%
+  dplyr::arrange(death_year, death_season) %>%
+  dplyr::group_by(death_season) %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>% 
+  ggplot2::ggplot(ggplot2::aes(x = death_year, 
+                               y = cumsum,
+                               color = death_season)) +
+  ggplot2::geom_point(ggplot2::aes(shape = death_season, 
+                                   size = 12)) +
+  ggplot2::geom_line() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Cumulative number of fatalities") +
+  ggplot2::ggtitle("Cumulative number of deaths by season")
+
+```
+
+
+
+
+```{r fig_season_year, echo=FALSE, fig.width = 10, fig.height = 7}
+
+hydrogeo_extemp_no_serrana_tb %>%
+  dplyr::mutate(death_season = dplyr::case_when(
+    death_month %in% c(12, 1, 2)  ~ "summer",
+    death_month %in% c(3, 4, 5)   ~ "fall",
+    death_month %in% c(6, 7, 8)   ~ "winter",
+    death_month %in% c(9, 10, 11) ~ "spring"
+  )) %>%
+  dplyr::mutate(cause = dplyr::recode(
+    cause,
+    "Earth surface movement and Eruption" = "geohydro",
+    "Heat"                                = "extreme temperature",
+    "Cataclismyc and Floods"              = "geohydro",
+    "Cold"                                = "extreme temperature",
+    "Landslide"                           = "geohydro",
+    "Cataclismyc"                         = "geohydro",                       
+    "Flood"                               = "geohydro",
+    "Earthquake"                          = "geohydro"
+  )) %>%
+  # dplyr::group_by(cause, death_season) %>%
+  # dplyr::summarize(fatalities = dplyr::n(),
+  #                  .groups = "drop") %>%
+  ggplot2::ggplot() + 
+  ggplot2::geom_bar(ggplot2::aes(x = death_season, 
+                                 fill = cause))
+   
+```
