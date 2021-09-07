@@ -21,6 +21,7 @@ knitr::opts_chunk$set(
 library(brazildatamortality)
 library(dplyr)
 library(ggplot2)
+library(patchwork)
 
 data_tb <- get_data()
 
@@ -310,3 +311,75 @@ hydrogeo_extemp_no_serrana_tb %>%
                                  fill = cause))
    
 ```
+
+
+
+
+
+```{r fig_tragedies_week, echo=FALSE, fig.width = 10, fig.height = 7}
+
+hydrogeo_extemp_no_serrana_tb %>%
+  dplyr::mutate(cause = dplyr::recode(
+    cause,
+    "Earth surface movement and Eruption" = "geohydro",
+    "Heat"                                = "extreme temperature",
+    "Cataclismyc and Floods"              = "geohydro",
+    "Cold"                                = "extreme temperature",
+    "Landslide"                           = "geohydro",
+    "Cataclismyc"                         = "geohydro",                       
+    "Flood"                               = "geohydro",
+    "Earthquake"                          = "geohydro"
+  )) %>%
+  dplyr::mutate(death_decade = as.integer(floor(death_year / 10) * 10),
+                death_year = as.integer(lubridate::year(death_date)),
+                death_decade_year = as.integer(death_year - death_decade),
+                death_week = lubridate::week(death_date)) %>%
+  dplyr::filter(cause == "geohydro") %>%
+  dplyr::group_by(death_decade, death_decade_year, death_year, 
+                  death_week) %>%
+  dplyr::summarise(count = dplyr::n(),
+                   .groups = "drop") %>%
+  # NOTE: More than 10 death in a week counts as a tragedy.
+  dplyr::filter(count >= 10) %>%
+  # NOTE: Zoom 
+  #dplyr::filter(death_week <= 5) %>%
+  dplyr::mutate(
+    death_decade = as.factor(as.character(death_decade)),
+    death_year   = as.factor(as.character(death_year)),
+    death_decade_year = as.factor(as.character(death_decade_year))
+  ) %>%
+  ggplot2::ggplot() +
+  ggplot2::geom_point(ggplot2::aes(x = death_week,
+                                   y = count,
+                                   shape = death_decade,
+                                   color = death_decade_year),
+                      size = 4) +
+  ggplot2::geom_text(ggplot2::aes(x = death_week,
+                                  y = count,
+                                  angle = 45,
+                                  label = stringr::str_c(death_year, 
+                                                         "-",
+                                                         death_week)),
+                     size = 3,
+                     nudge_x = 0.1,
+                     nudge_y = 0.1) +
+  ggplot2::ggtitle("Tragedies by week of the year") +
+  ggplot2::xlab("Week of the year") +
+  ggplot2::ylab("Deaths in a week")
+
+```
+
+
+
+```{r fig_season_lustrum, echo=FALSE, fig.width = 10, fig.height = 7}
+
+# hydrogeo_extemp_no_serrana_tb %>%
+#   dplyr::mutate(death_season = dplyr::case_when(
+#     death_month %in% c(12, 1, 2)  ~ "summer",
+#     death_month %in% c(3, 4, 5)   ~ "fall",
+#     death_month %in% c(6, 7, 8)   ~ "winter",
+#     death_month %in% c(9, 10, 11) ~ "spring"),
+#     death_lustrum = as.integer(floor(death_year / 5) * 5),
+
+```
+
