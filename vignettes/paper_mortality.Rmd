@@ -255,27 +255,76 @@ plot_sf %>%
 
 ```{r fig_season_cum_year, echo=FALSE, fig.width = 10, fig.height = 7}
 
+year_span <- hydrogeo_extemp_no_serrana_tb %>%
+  dplyr::pull(death_date) %>%
+  lubridate::year() %>%
+  range()
+year_span <- year_span + c(-1, 1)
+year_span <- year_span[1]:year_span[2]
+
+season_start <- c(summer = "12-21",
+                  fall   = "03-20",
+                  winter = "06-21",
+                  spring = "09-22")
+
+season_vec <- year_span %>% 
+  tidyr::expand_grid(season_start) %>%
+  dplyr::mutate(season_start = paste(year_span, season_start, sep = "-")) %>% 
+  dplyr::mutate(season_start = lubridate::as_date(season_start)) %>%
+  arrange(season_start) %>%
+  pull(season_start) %>%
+  sort()
+
+find_season <- function(x){
+  return(season_vec[findInterval(x, season_vec)])
+}
+
+get_season <- function(x) {
+  return(paste(sprintf("%02d", lubridate::month(x)),
+               sprintf("%02d", lubridate::day(x)),
+               sep = "-"))
+}
+
+get_season_name <- function(x) {
+  return(names(which(x == season_start)))
+}
+
 hydrogeo_extemp_no_serrana_tb %>%
-  dplyr::mutate(death_season = dplyr::case_when(
-    death_month %in% c(12, 1, 2)  ~ "summer",
-    death_month %in% c(3, 4, 5)   ~ "fall",
-    death_month %in% c(6, 7, 8)   ~ "winter",
-    death_month %in% c(9, 10, 11) ~ "spring"
-  )) %>%
-  dplyr::group_by(death_year, death_season) %>%
+   dplyr::mutate(cause = dplyr::recode(
+    cause,
+    "Earth surface movement and Eruption" = "geohydro",
+    "Heat"                                = "heat",
+    "Cataclismyc and Floods"              = "geohydro",
+    "Cold"                                = "cold",
+    "Landslide"                           = "geohydro",
+    "Cataclismyc"                         = "geohydro",                       
+    "Flood"                               = "geohydro",
+    "Earthquake"                          = "geohydro"
+  )) %>% 
+  dplyr::mutate(death_season = purrr::map(death_date, 
+                                          find_season),
+                death_season = purrr::map_chr(death_season,
+                                              get_season),
+                death_season = purrr::map_chr(death_season, 
+                                              get_season_name)) %>%
+  dplyr::group_by(death_year, death_season, cause) %>%
   dplyr::summarize(fatalities = dplyr::n(),
                    .groups = "drop") %>%
-  dplyr::arrange(death_year, death_season) %>%
-  dplyr::group_by(death_season) %>%
+  dplyr::arrange(death_year, death_season, cause) %>%
+  dplyr::group_by(death_season, cause) %>%
   dplyr::mutate(cumsum = cumsum(fatalities)) %>% 
+  dplyr::mutate(death_season = factor(death_season,
+                                      levels = names(season_start),
+                                      ordered = TRUE)) %>% 
   ggplot2::ggplot(ggplot2::aes(x = death_year, 
                                y = cumsum,
-                               color = death_season)) +
-  ggplot2::geom_point(ggplot2::aes(shape = death_season, 
-                                   size = 12)) +
+                               color = cause)) +
+  ggplot2::geom_point(ggplot2::aes(shape = cause), 
+                                   size = 4) +
   ggplot2::geom_line() +
+  ggplot2::facet_wrap(~death_season) +
   ggplot2::xlab("Year") +
-  ggplot2::ylab("Cumulative number of fatalities") +
+  ggplot2::ylab("Cumulative number of fatalities") + 
   ggplot2::ggtitle("Cumulative number of deaths by season")
 
 ```
@@ -383,3 +432,103 @@ hydrogeo_extemp_no_serrana_tb %>%
 
 ```
 
+
+```{r death_by_sex_age, echo=FALSE, fig.width = 10, fig.height = 7}
+
+age_start <- seq(0, 90, by = 5) 
+age_start[length(age_start)] <- Inf
+names(age_start) <- paste(age_start, c(age_start[-1], ""), sep = "-")
+age_start <- age_start[1:(length(age_start) - 1)]
+
+get_age_interval <- function(x) {
+  return(findInterval(x, age_start))
+}
+
+plot_tb <- hydrogeo_extemp_no_serrana_tb %>%
+  dplyr::mutate(cause = dplyr::recode(
+    cause,
+    "Earth surface movement and Eruption" = "geohydro",
+    "Heat"                                = "extreme temperature",
+    "Cataclismyc and Floods"              = "geohydro",
+    "Cold"                                = "extreme temperature",
+    "Landslide"                           = "geohydro",
+    "Cataclismyc"                         = "geohydro",                       
+    "Flood"                               = "geohydro",
+    "Earthquake"                          = "geohydro"
+  )) %>%
+  dplyr::filter(sex %in% c("Female", "Male")) %>% 
+  dplyr::mutate(death_age_interval = purrr::map_dbl(age,
+                                                    get_age_interval)) %>%
+  tidyr::drop_na(death_age_interval) %>%
+  dplyr::group_by(sex, death_age_interval) %>%
+  dplyr::summarise(fatalities = dplyr::n()) %>%
+  dplyr::ungroup()
+
+ggplot2::ggplot(plot_tb,
+                ggplot2::aes(x = as.factor(death_age_interval),
+                             fill = sex)) +
+  ggplot2::geom_bar(data = dplyr::filter(plot_tb, sex == "Male"),
+                    mapping = ggplot2::aes(y = fatalities),
+                    stat = "identity") +
+  ggplot2::geom_bar(data = dplyr::filter(plot_tb, sex == "Female"),
+                    mapping = ggplot2::aes(y = fatalities * (-1)),
+                    stat = "identity") +
+  ggplot2::coord_flip() +
+  ggplot2::scale_y_continuous(labels = abs) +
+  ggplot2::scale_x_discrete(labels = names(age_start)) +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::xlab("Age group")
+
+```
+
+
+```{r death_by_sex_age_cause, echo=FALSE, fig.width = 10, fig.height = 7}
+
+age_start <- seq(0, 90, by = 5) 
+age_start[length(age_start)] <- Inf
+names(age_start) <- paste(age_start, c(age_start[-1], ""), sep = "-")
+age_start <- age_start[1:(length(age_start) - 1)]
+
+get_age_interval <- function(x) {
+  return(findInterval(x, age_start))
+}
+
+plot_tb <- hydrogeo_extemp_no_serrana_tb %>%
+  dplyr::mutate(cause = dplyr::recode(
+    cause,
+    "Earth surface movement and Eruption" = "geohydro",
+    "Heat"                                = "heat",
+    "Cataclismyc and Floods"              = "geohydro",
+    "Cold"                                = "cold",
+    "Landslide"                           = "geohydro",
+    "Cataclismyc"                         = "geohydro",                       
+    "Flood"                               = "geohydro",
+    "Earthquake"                          = "geohydro"
+  )) %>%
+  dplyr::filter(sex %in% c("Female", "Male")) %>% 
+  dplyr::mutate(death_age_interval = purrr::map_dbl(age,
+                                                    get_age_interval)) %>%
+  tidyr::drop_na(death_age_interval) %>%
+  dplyr::group_by(cause, sex, death_age_interval) %>%
+  dplyr::summarise(fatalities = dplyr::n()) %>%
+  dplyr::ungroup()
+
+ggplot2::ggplot(plot_tb,
+                ggplot2::aes(x = as.factor(death_age_interval),
+                             fill = cause)) +
+  ggplot2::geom_bar(data = dplyr::filter(plot_tb, sex == "Male"),
+                    mapping = ggplot2::aes(y = fatalities),
+                    stat = "identity") +
+  ggplot2::geom_bar(data = dplyr::filter(plot_tb, sex == "Female"),
+                    mapping = ggplot2::aes(y = fatalities * (-1)),
+                    stat = "identity") +
+  ggplot2::coord_flip() +
+  ggplot2::geom_hline(yintercept = 0, 
+                      linetype = "dashed", 
+                      color = "black") +
+  ggplot2::scale_y_continuous(labels = abs) +
+  ggplot2::scale_x_discrete(labels = names(age_start)) +
+  ggplot2::ylab("Number of fatalities (women to the left, men to the right)") +
+  ggplot2::xlab("Age group")
+
+```
