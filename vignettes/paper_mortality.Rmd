@@ -532,3 +532,158 @@ ggplot2::ggplot(plot_tb,
   ggplot2::xlab("Age group")
 
 ```
+
+```{r death_by_sex_age_hydrogeo, echo=FALSE, fig.width = 10, fig.height = 7}
+
+age_start <- seq(0, 90, by = 5) 
+age_start[length(age_start)] <- Inf
+names(age_start) <- paste(age_start, c(age_start[-1], ""), sep = "-")
+age_start <- age_start[1:(length(age_start) - 1)]
+
+get_age_interval <- function(x) {
+    return(findInterval(x, age_start))
+}
+
+plot_tb <- hydrogeo_extemp_no_serrana_tb %>%
+    dplyr::mutate(cause = dplyr::recode(
+        cause,
+        "Earth surface movement and Eruption" = "geohydro",
+        "Heat"                                = "extreme temperature",
+        "Cataclismyc and Floods"              = "geohydro",
+        "Cold"                                = "extreme temperature",
+        "Landslide"                           = "geohydro",
+        "Cataclismyc"                         = "geohydro",                       
+        "Flood"                               = "geohydro",
+        "Earthquake"                          = "geohydro"
+    )) %>%
+    dplyr::filter(cause == "geohydro") %>% 
+    dplyr::filter(sex %in% c("Female", "Male")) %>% 
+    dplyr::mutate(death_age_interval = purrr::map_dbl(age,
+                                                      get_age_interval)) %>%
+    tidyr::drop_na(death_age_interval) %>%
+    dplyr::group_by(sex, death_age_interval) %>%
+    dplyr::summarise(fatalities = dplyr::n()) %>%
+    dplyr::ungroup() 
+
+ggplot2::ggplot(plot_tb,
+                ggplot2::aes(x = as.factor(death_age_interval),
+                             fill = sex)) +
+    ggplot2::geom_bar(data = dplyr::filter(plot_tb, sex == "Male"),
+                      mapping = ggplot2::aes(y = fatalities),
+                      stat = "identity") +
+    ggplot2::geom_bar(data = dplyr::filter(plot_tb, sex == "Female"),
+                      mapping = ggplot2::aes(y = fatalities * (-1)),
+                      stat = "identity") +
+    ggplot2::coord_flip() +
+    ggplot2::scale_y_continuous(labels = abs) +
+    ggplot2::scale_x_discrete(labels = names(age_start)) +
+    ggplot2::ylab("Number of fatalities") +
+    ggplot2::xlab("Age group") +
+    ggplot2::ggtitle("Only geohydro")
+
+
+```
+
+```{r death_by_sex_age_heatcold, echo=FALSE, fig.width = 10, fig.height = 7}
+
+age_start <- seq(0, 90, by = 5) 
+age_start[length(age_start)] <- Inf
+names(age_start) <- paste(age_start, c(age_start[-1], ""), sep = "-")
+age_start <- age_start[1:(length(age_start) - 1)]
+
+get_age_interval <- function(x) {
+  return(findInterval(x, age_start))
+}
+
+plot_tb <- hydrogeo_extemp_no_serrana_tb %>%
+  dplyr::mutate(cause = dplyr::recode(
+    cause,
+    "Earth surface movement and Eruption" = "geohydro",
+    "Heat"                                = "heat",
+    "Cataclismyc and Floods"              = "geohydro",
+    "Cold"                                = "cold",
+    "Landslide"                           = "geohydro",
+    "Cataclismyc"                         = "geohydro",                       
+    "Flood"                               = "geohydro",
+    "Earthquake"                          = "geohydro"
+  )) %>%
+  dplyr::filter(sex %in% c("Female", "Male")) %>% 
+  dplyr::mutate(death_age_interval = purrr::map_dbl(age,
+                                                    get_age_interval)) %>%
+  tidyr::drop_na(death_age_interval) %>%
+  dplyr::group_by(cause, sex, death_age_interval) %>%
+  dplyr::summarise(fatalities = dplyr::n()) %>%
+  dplyr::ungroup() %>% 
+    dplyr::filter(cause %in% c("heat", "cold"))
+
+ggplot2::ggplot(plot_tb,
+                ggplot2::aes(x = as.factor(death_age_interval),
+                             fill = cause)) +
+  ggplot2::geom_bar(data = dplyr::filter(plot_tb, sex == "Male"),
+                    mapping = ggplot2::aes(y = fatalities),
+                    stat = "identity") +
+  ggplot2::geom_bar(data = dplyr::filter(plot_tb, sex == "Female"),
+                    mapping = ggplot2::aes(y = fatalities * (-1)),
+                    stat = "identity") +
+  ggplot2::coord_flip() +
+  ggplot2::geom_hline(yintercept = 0, 
+                      linetype = "dashed", 
+                      color = "black") +
+  ggplot2::scale_y_continuous(labels = abs) +
+  ggplot2::scale_x_discrete(labels = names(age_start)) +
+  ggplot2::ylab("Number of fatalities (women to the left, men to the right)") +
+  ggplot2::xlab("Age group") +
+    ggplot2::ggtitle("Only extreme temperatures")
+
+```
+
+```{r death_by_sex_age_locus, echo=FALSE, fig.width = 10, fig.height = 7}
+
+age_start <- seq(0, 90, by = 5) 
+age_start[length(age_start)] <- Inf
+names(age_start) <- paste(age_start, c(age_start[-1], ""), sep = "-")
+age_start <- age_start[1:(length(age_start) - 1)]
+
+get_age_interval <- function(x) {
+  return(findInterval(x, age_start))
+}
+
+
+my_interval <- tibble::tibble(id = age_start,
+                              label = names(age_start))
+
+my_labeller <- function(x){
+    return(names(age_start[x]))
+}
+
+plot_tb <- hydrogeo_extemp_no_serrana_tb %>%
+  dplyr::mutate(cause = dplyr::recode(
+    cause,
+    "Earth surface movement and Eruption" = "geohydro",
+    "Heat"                                = "extreme temp",
+    "Cataclismyc and Floods"              = "geohydro",
+    "Cold"                                = "extreme temp",
+    "Landslide"                           = "geohydro",
+    "Cataclismyc"                         = "geohydro",                       
+    "Flood"                               = "geohydro",
+    "Earthquake"                          = "geohydro"
+  )) %>%
+  dplyr::filter(sex %in% c("Female", "Male")) %>%
+  dplyr::mutate(death_age_interval = purrr::map_dbl(age,
+                                                    get_age_interval)) %>%
+  tidyr::drop_na(death_age_interval) %>%
+  dplyr::group_by(cause, sex, death_age_interval, locus) %>%
+  dplyr::group_by(cause, sex, death_age_interval, locus) %>%
+  dplyr::summarise(fatalities = dplyr::n()) %>%
+  dplyr::ungroup()
+
+plot_tb %>%
+    tidyr::drop_na() %>%
+    ggplot2::ggplot(ggplot2::aes(x = sex, 
+                                 y = fatalities, 
+                                 fill = locus)) + 
+    ggplot2::geom_bar(stat = 'identity') + 
+    ggplot2::facet_grid(rows = vars(cause),
+                        cols = vars(death_age_interval))
+
+```
