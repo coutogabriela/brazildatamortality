@@ -644,38 +644,35 @@ age_start[length(age_start)] <- Inf
 names(age_start) <- paste(age_start, c(age_start[-1], ""), sep = "-")
 age_start <- age_start[1:(length(age_start) - 1)]
 
-get_age_interval <- function(x) {
-  return(findInterval(x, age_start))
-}
-
-
 my_interval <- tibble::tibble(id = age_start,
                               label = names(age_start))
 
-my_labeller <- function(x){
-    return(names(age_start[x]))
-}
-
 plot_tb <- hydrogeo_extemp_no_serrana_tb %>%
-  dplyr::mutate(cause = dplyr::recode(
-    cause,
-    "Earth surface movement and Eruption" = "geohydro",
-    "Heat"                                = "extreme temp",
-    "Cataclismyc and Floods"              = "geohydro",
-    "Cold"                                = "extreme temp",
-    "Landslide"                           = "geohydro",
-    "Cataclismyc"                         = "geohydro",                       
-    "Flood"                               = "geohydro",
-    "Earthquake"                          = "geohydro"
-  )) %>%
-  dplyr::filter(sex %in% c("Female", "Male")) %>%
-  dplyr::mutate(death_age_interval = purrr::map_dbl(age,
-                                                    get_age_interval)) %>%
-  tidyr::drop_na(death_age_interval) %>%
-  dplyr::group_by(cause, sex, death_age_interval, locus) %>%
-  dplyr::group_by(cause, sex, death_age_interval, locus) %>%
-  dplyr::summarise(fatalities = dplyr::n()) %>%
-  dplyr::ungroup()
+    dplyr::mutate(cause = dplyr::recode(
+        cause,
+        "Earth surface movement and Eruption" = "geohydro",
+        "Heat"                                = "extreme temp",
+        "Cataclismyc and Floods"              = "geohydro",
+        "Cold"                                = "extreme temp",
+        "Landslide"                           = "geohydro",
+        "Cataclismyc"                         = "geohydro",                       
+        "Flood"                               = "geohydro",
+        "Earthquake"                          = "geohydro"
+    )) %>%
+    dplyr::filter(sex %in% c("Female", "Male")) %>%
+    dplyr::mutate(death_age_interval = purrr::map_int(age,
+                                                      get_age_interval)) %>%
+    tidyr::drop_na(death_age_interval) %>%
+    dplyr::group_by(cause, sex, death_age_interval, locus) %>%
+    dplyr::group_by(cause, sex, death_age_interval, locus) %>%
+    dplyr::summarise(fatalities = dplyr::n()) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(death_age_interval) %>%
+    dplyr::mutate(death_age_interval = dplyr::recode(death_age_interval,
+                                                     !!!names(age_start)),
+                  death_age_interval = factor(death_age_interval,
+                                              levels = names(age_start),
+                                              ordered = TRUE))
 
 plot_tb %>%
     tidyr::drop_na() %>%
@@ -685,5 +682,6 @@ plot_tb %>%
     ggplot2::geom_bar(stat = 'identity') + 
     ggplot2::facet_grid(rows = vars(cause),
                         cols = vars(death_age_interval))
+                        
 
 ```
