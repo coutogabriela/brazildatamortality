@@ -680,8 +680,9 @@ plot_tb %>%
                                  y = fatalities, 
                                  fill = locus)) + 
     ggplot2::geom_bar(stat = 'identity') + 
+    ggplot2::scale_colour_viridis_c() +
     ggplot2::facet_grid(rows = vars(cause),
-                        cols = vars(death_age_interval))
-                        
+                        cols = vars(death_age_interval)) +
+    ggplot2::theme(axis.text.x = element_text(angle = 270, hjust = 1))
 
 ```
