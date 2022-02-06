@@ -12,8 +12,10 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Depends: R (>= 2.10)
+Imports:
+    magrittr
 Suggests: 
     dplyr,
     ggplot2,
@@ -21,13 +23,16 @@ Suggests:
     geogrid,
     knitr,
     lubridate,
-    magrittr,
+    patchwork,
+    purrr,
     read.dbc,
     rmarkdown,
     RcppRoll,
+    scales,
     sf,
     skimr,
     stringr,
     tibble,
-    tidyr
+    tidyr,
+    viridis
 VignetteBuilder: knitr

@@ -3,6 +3,9 @@
 #' @return A tibble with mortality data of Brazil.
 #' @export
 get_data <- function() {
+    birth_date <- cause <- death_city <- death_date <- education <- NULL
+    job <- locus <- marital <- residence_city <- sex <- color_race <- NULL
+    literacy <- age_unit <- age_value <- NULL
 
     data_9  <- brazildatamortality::data_icd_9
     data_10 <- brazildatamortality::data_icd_10

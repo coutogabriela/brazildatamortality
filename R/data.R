@@ -8,6 +8,8 @@
 #'
 #' @format A data frame with XXXX rows and 12 variables:
 #' \describe{
+#'   \item{age_unit}{Units of age}
+#'   \item{age_value}{Age}
 #'   \item{birth_date}{Date of birth}
 #'   \item{cause}{Cause of death}
 #'   \item{residence_city}{Code of the city of residence}
@@ -32,6 +34,8 @@
 #'
 #' @format A data frame with XXXX rows and 10 variables:
 #' \describe{
+#'   \item{age_unit}{Units of age}
+#'   \item{age_value}{Age}
 #'   \item{birth_date}{Data of birth}
 #'   \item{cause}{Cause of death}
 #'   \item{residence_city}{Code of the city of residence}
