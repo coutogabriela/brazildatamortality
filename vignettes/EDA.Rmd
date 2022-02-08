@@ -1,0 +1,475 @@
+---
+title: "Exploratory data analysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{EDA}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, include = FALSE}
+
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(skimr)
+library(stringr)
+library(tidyr)
+
+library(brazildatamortality)
+
+```
+
+
+```{r check_variables, include=FALSE}
+
+# TODO: Make figures by job_name
+# TODO: Add the original age from the raw data.
+
+# TODO: Fix jobs. There is more than one jobs description for each job code.
+# # Join job names.
+# job_names_9  <- "/home/alber/Documents/github/brazildatamortality/data-raw/TABOCUP_cid9.DBF" %>% 
+#   ensurer::ensure_that(file.exists(.), err_desc = "File not found") %>% 
+#   foreign::read.dbf(as.is = TRUE) %>% 
+#   tibble::as_tibble() %>% 
+#   dplyr::rename(job = CODIGO,
+#                 job_name = DESCRICAO)
+# job_names_10 <- "/home/alber/Documents/github/brazildatamortality/data-raw/TABOCUP_cid10.DBF" %>% 
+#   ensurer::ensure_that(file.exists(.), err_desc = "File not found") %>% 
+#   foreign::read.dbf() %>% 
+#   tibble::as_tibble(as.is = TRUE) %>% 
+#   dplyr::rename(job = CODIGO,
+#                 job_name = DESCRICAO)
+#   
+# # Check that data before and after 1996 have the same variables and categories.
+# data_9  <- brazildatamortality::data_icd_9 %>% 
+#   dplyr::left_join(job_names_9, by = "job")
+# data_10 <- brazildatamortality::data_icd_10 %>% 
+#   dplyr::left_join(job_names_10, by = "job")
+
+
+data_9  <- brazildatamortality::data_icd_9
+data_10 <- brazildatamortality::data_icd_10
+
+colnames(data_10) %>% sort()
+colnames(data_9)  %>% sort()
+
+
+# NOTE: They don't math too much because data before 1996 is deficient. 
+data_10 %>% pull(cause) %>% unique() %>% sort()
+data_9  %>% pull(cause) %>% unique() %>% sort()
+
+# NOTE: 6 versus 7 digit codes. 
+data_10 %>% sample_n(6) %>% pull(residence_city) %>% unique() %>% sort()
+data_9  %>% sample_n(6) %>% pull(residence_city) %>% unique() %>% sort()
+
+# NOTE: 6 versus 7 digit codes. 
+data_10 %>% sample_n(6) %>% pull(death_city) %>% unique() %>% sort()
+data_9  %>% sample_n(6) %>% pull(death_city) %>% unique() %>% sort()
+
+# DONE: Recode jobs.
+data_10 %>% sample_n(6) %>% pull(job) %>% unique() %>% sort()
+data_9  %>% sample_n(6) %>% pull(job) %>% unique() %>% sort()
+
+# OK
+data_10 %>% sample_n(6) %>% pull(birth_date) %>% unique() %>% sort()
+data_9  %>% sample_n(6) %>% pull(birth_date) %>% unique() %>% sort()
+
+# OK
+data_10 %>% sample_n(6) %>% pull(death_date) %>% unique() %>% sort()
+data_9  %>% sample_n(6) %>% pull(death_date) %>% unique() %>% sort()
+
+
+# OK 
+data_10 %>% sample_n(6) %>% pull(locus) %>% unique() %>% sort()
+data_9  %>% sample_n(6) %>% pull(locus) %>% unique() %>% sort()
+
+# OK
+data_10 %>% pull(marital) %>% unique() %>% sort()
+data_9  %>% pull(marital) %>% unique() %>% sort()
+
+# OK
+data_10 %>% pull(sex) %>% unique() %>% sort()
+data_9  %>% pull(sex) %>% unique() %>% sort()
+
+# OK
+data_10 %>% pull(education) %>% unique() %>% sort()
+data_9  %>% pull(education) %>% unique() %>% sort()
+
+```
+
+
+
+```{r merge_both_data, include=FALSE}
+
+data_tb <- get_data()
+
+outlier_data <- data_tb %>%
+  dplyr::filter(death_date > as.Date("2011-01-10"),
+                death_date < as.Date("2011-01-13"))
+
+regular_data <- data_tb %>%
+  dplyr::filter(death_date < as.Date("2011-01-11") | 
+                death_date > as.Date("2011-01-12"))
+
+```
+
+
+
+## Abstract.
+
+## Introduction.
+
+## Materials and methods.
+
+## Results.
+
+```{r eda, echo=FALSE, fig.width = 7, fig.height = 5}
+
+#library(GGally)
+
+# data_tb %>%
+#   dplyr::filter(death_year > 2005) %>%
+#   dplyr::mutate(death_month = stringr::str_pad(death_month, pad = "0", width = 2)) %>%
+#   dplyr::mutate(death_year = as.factor(death_year),
+#                 death_month = as.factor(death_month)) %>%
+#   dplyr::select(cause, education, locus, marital, 
+#                 sex, death_year, death_month) %>%
+#   GGally::ggpairs(ggplot2::aes(color = cause))
+
+# data_tb %>%
+#   dplyr::mutate(death_month = stringr::str_pad(death_month, pad = "0", 
+#                                                width = 2)) %>%
+#   dplyr::mutate(death_year = as.factor(death_year),
+#                 death_month = as.factor(death_month)) %>%
+#   dplyr::select(cause, education, locus, marital, 
+#                 sex, death_year, death_month) %>%
+#   tidyr::pivot_longer(education:death_month) %>%
+#   ggplot2::ggplot(ggplot2::aes(y = value, fill = cause)) +
+#   ggplot2::geom_bar(position = "fill") +
+#   ggplot2::facet_wrap(vars(name), scales = "free") +
+#   ggplot2::labs(x = NULL, y = NULL, fill = NULL)
+
+
+```
+
+
+```{r cause_state, echo=FALSE, fig.width = 10, fig.height = 7}
+
+state_tb <- brazildatamortality::state_sf %>% 
+  sf::st_set_geometry(NULL) %>% 
+  dplyr::mutate(code_state = as.character(code_state))
+
+# cumsum
+data_tb %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::group_by(abbrev_state, cause, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(cause, death_year) %>%
+  tidyr::drop_na() %>%
+  dplyr::mutate_if(is.character, as.factor) %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = cumsum, 
+                               color = cause, 
+                               )) +
+  ggplot2::geom_point(ggplot2::aes(shape = cause)) +
+  ggplot2::geom_line(ggplot2::aes(linetype = cause)) +
+  ggplot2::facet_wrap(vars(abbrev_state)) +
+  ggplot2::scale_y_log10() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Cumulative number of fatalities (log)") +
+  ggplot2::ggtitle("Deaths by cause by state")
+
+
+# TODO: Gabriela check if this figure works.
+data_tb %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::group_by(death_year, cause, name_region) %>%
+  dplyr::summarize(fatalities = dplyr::n(), 
+                   .groups = "drop") %>%
+  tidyr::drop_na() %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = fatalities, 
+                               color = cause, 
+                               group = cause)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  ggplot2::facet_wrap(vars(name_region)) +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Deaths by cause by region")
+
+# TODO: Gabriela check if this figure works.
+# cumsum
+data_tb %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::group_by(name_region, cause, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(cause, death_year) %>%
+  tidyr::drop_na() %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = cumsum, 
+                               color = name_region)) +
+  ggplot2::geom_point(ggplot2::aes(shape = name_region)) +
+  ggplot2::geom_line(ggplot2::aes(linetype = name_region)) +
+  ggplot2::facet_wrap(~cause) +
+  ggplot2::scale_y_log10() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Cumulative number of fatalities (log)") +
+  ggplot2::ggtitle("Deaths by cause by region")
+
+```
+
+
+
+```{r todo1, echo=FALSE, fig.width = 10, fig.height = 7}
+
+
+# TODO: Gabriela check if this figure works.
+# NOTE: The increment of deaths by landslide in the Sudeste region.
+data_tb %>%
+  dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
+                             "Cataclismyc and Floods", 
+                             "Earth surface movement and Eruption")) %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::group_by(name_region, cause, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(cause, death_year) %>%
+  tidyr::drop_na() %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = cumsum, 
+                               color = name_region)) +
+  ggplot2::geom_point(ggplot2::aes(shape = name_region)) +
+  ggplot2::geom_line(ggplot2::aes(linetype = name_region)) +
+  ggplot2::facet_wrap(~cause) +
+  ggplot2::scale_y_log10() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Cumulative number of fatalities (log)") +
+  ggplot2::ggtitle("Deaths by cause by region")
+
+# TODO: Gabriela check if this figure works.
+data_tb %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
+                             "Cataclismyc and Floods", 
+                             "Earth surface movement and Eruption"),
+                name_region == "Sudeste") %>% 
+  dplyr::group_by(abbrev_state, cause, death_year) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(cause, death_year) %>%
+  tidyr::drop_na() %>%
+  dplyr::mutate_if(is.character, as.factor) %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = cumsum, 
+                               color = cause, 
+                               )) +
+  ggplot2::geom_point(ggplot2::aes(shape = cause)) +
+  ggplot2::geom_line(ggplot2::aes(linetype = cause)) +
+  ggplot2::facet_wrap(vars(abbrev_state)) +
+  ggplot2::scale_y_log10() +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Cumulative number of fatalities (log)") +
+  ggplot2::ggtitle("Deaths by cause by state")
+
+```
+
+
+
+```{r todo3, echo=FALSE, fig.width = 10, fig.height = 7}
+
+# TODO: Join by code_muni creates many NAs
+# #+ maps by region? by state? which year?
+# town_data <- data_tb %>%
+#   dplyr::left_join(town_tb, 
+#                    by = c("death_city" = "code_muni")) %>%
+#   dplyr::group_by(death_city, cause) %>%
+#   dplyr::summarize(fatalities = dplyr::n()) %>%
+#   dplyr::ungroup() %>%
+#   dplyr::mutate(cause = stringr::str_replace_all(cause, 
+#                                                  pattern = " ",
+#                                                  replacement = "_")) %>%
+#   tidyr::pivot_wider(id_cols = death_city, 
+#                      names_from = cause,
+#                      values_from = fatalities)
+
+# TODO: Join by code_muni creates many NAs
+# my_region <- "Sudeste"
+# town_sf %>%
+#   sf::st_make_valid() %>% 
+#   dplyr::select(code_muni) %>%
+#   dplyr::mutate(code_muni = as.character(code_muni)) %>%
+#   sf::st_centroid() %>% 
+#   dplyr::left_join(town_tb, by = "code_muni") %>%
+#   dplyr::left_join(town_data, by = c("code_muni" = "death_city")) %>%
+#   dplyr::filter(name_region == my_region) %>%
+#   ggplot2::ggplot() +
+#   ggplot2::geom_sf(data = dplyr::filter(town_sf, 
+#                                         name_region == my_region)) +
+#   ggplot2::geom_sf(ggplot2::aes(color = Lightning, 
+#                                 size  = Lightning)) 
+
+# State
+state_data <- data_tb %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::group_by(abbrev_state, cause) %>%
+  dplyr::summarize(fatalities = dplyr::n()) %>%
+  dplyr::ungroup()
+
+state_hex <- brazildatamortality::state_hex
+ 
+plot_sf <- merge(state_hex, state_data,
+                 by = "abbrev_state",
+                 all.x = TRUE)
+plot_sf %>%
+  ggplot2::ggplot() +
+  ggplot2::geom_sf(data = state_hex) +
+  ggplot2::geom_sf_label(ggplot2::aes(label = abbrev_state))
+plot_sf %>%
+  ggplot2::ggplot() +
+  ggplot2::geom_sf(data = state_hex) +
+  ggplot2::geom_sf(ggplot2::aes(fill = log10(fatalities)), colour = NA) +
+  ggplot2::scale_fill_viridis_c(option = 'plasma') +
+  ggplot2::facet_wrap(~cause)
+
+```
+
+
+```{r map_by_year, echo=FALSE}
+
+hydrogeo_causes <- c("Cataclismyc", 
+                     "Cataclismyc and Floods",
+                     "Earth surface and Eruption",
+                     "Flood",
+                     "Landslide",
+                     "Earthquake")
+for (y in c(seq(from = 1980, to = 2015, by = 5), 2019)) {
+  state_year_data <- data_tb %>%
+    dplyr::mutate(death_year = lubridate::year(death_date)) %>% 
+    dplyr::filter(cause %in% hydrogeo_causes,
+                  death_year <= y) %>% 
+    dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+    dplyr::left_join(state_tb, by = "code_state") %>% 
+    dplyr::group_by(abbrev_state) %>%
+    dplyr::summarise(fatalities = dplyr::n()) %>% 
+    dplyr::ungroup()
+    plot_sf <- merge(state_hex, state_year_data,
+                   by = "abbrev_state",
+                   all.x = TRUE)
+  my_plot <- plot_sf %>% 
+    ggplot2::ggplot() +
+    ggplot2::geom_sf(data = state_hex) +
+    ggplot2::geom_sf(ggplot2::aes(fill = log10(fatalities)), colour = NA) +
+    viridis::scale_fill_viridis(limits = c(0, 4), oob = scales::squish) +
+    #ggplot2::geom_sf_label(ggplot2::aes(label = fatalities)) + 
+    ggplot2::ggtitle(sprintf("Hydro-geological deaths until %s", y))
+  print(my_plot)
+} 
+
+```
+
+
+```{r todo2, echo=FALSE, fig.width = 10, fig.height = 7}
+
+# + Add figure of low impact death causes by season (x = month, 
+# y = number of fatalities, color = cause).
+
+# TODO: Gabriela check if this figure works.
+data_tb %>%
+  dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
+                             "Cataclismyc and Floods", 
+                             "Earth surface movement and Eruption")) %>%
+  dplyr::select(cause, death_month) %>%
+  tidyr::drop_na() %>%
+  dplyr::mutate_all(as.factor) %>%
+  ggplot2::ggplot() +
+  ggplot2::geom_bar(ggplot2::aes(x = death_month,
+                               fill = cause)) +
+  ggplot2::xlab("Month") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Deaths by cause by month")
+
+# TODO: Gabriela check if this figure works.
+data_tb %>%
+  dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
+                             "Cataclismyc and Floods", 
+                             "Earth surface movement and Eruption")) %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::select(name_region, cause, death_month) %>%
+  tidyr::drop_na() %>%
+  dplyr::mutate_all(as.factor) %>%
+  ggplot2::ggplot() +
+  ggplot2::geom_bar(ggplot2::aes(x = death_month,
+                               fill = cause)) +
+  ggplot2::facet_wrap(~name_region) +
+  ggplot2::xlab("Month") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Deaths by cause by region and month")
+
+# TODO: Gabriela check if this figure works.
+data_tb %>%
+  dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
+                             "Cataclismyc and Floods", 
+                             "Earth surface movement and Eruption")) %>%
+  dplyr::group_by(week = lubridate::week(death_date),
+                  wday = lubridate::wday(death_date)) %>%
+  dplyr::summarise(log10_sum_deaths = log10(dplyr::n())) %>% 
+  ggplot2::ggplot(ggplot2::aes(x = week, 
+                               y = wday, 
+                               fill = log10_sum_deaths)) +
+  ggplot2::geom_tile(alpha = 0.8) +
+  ggplot2::scale_fill_viridis_c() +
+  ggplot2::ggtitle("Log10 of the cumulative sum of deaths by week and day of the week")
+                    
+  
+# TODO: Gabriela check if this figure works.
+data_tb %>%
+  dplyr::filter(cause %in% c("Cataclismyc", "Flood", "Landslide", 
+                             "Cataclismyc and Floods", 
+                             "Earth surface movement and Eruption")) %>%
+  dplyr::group_by(week = lubridate::week(death_date),
+                  wday = lubridate::wday(death_date),
+                  death_year) %>%
+  dplyr::summarise(n_deaths = dplyr::n()) %>% 
+  dplyr::ungroup() %>%
+  dplyr::group_by(week, wday) %>%
+  dplyr::summarise(median_deaths = median(n_deaths)) %>% 
+  ggplot2::ggplot(ggplot2::aes(x = week, 
+                               y = wday, 
+                               fill = median_deaths)) +
+  ggplot2::geom_tile(alpha = 0.8) +
+  ggplot2::scale_fill_viridis_c() +
+  ggplot2::ggtitle("Median of the cumulative sum of deaths by week and day of the week")
+                    
+
+
+```
+
+
+
+## Conclusions.
+
+## References.

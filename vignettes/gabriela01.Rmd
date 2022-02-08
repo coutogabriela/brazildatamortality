@@ -1,0 +1,518 @@
+---
+title: "Exploratory data analysis"
+subtitle: "Without no catastrophical natural hazards"  
+output: rmarkdown::html_vignette
+vignette: >
+    %\VignetteIndexEntry{Exploratory data analysis}
+    %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+    chunk_output_type: console
+---
+    
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    comment = "#>"
+)
+```
+
+```{r setup, include = FALSE}
+
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(skimr)
+library(stringr)
+library(tidyr)
+
+library(brazildatamortality)
+
+```
+
+
+
+```{r merge_filter_both_data, include=FALSE}
+
+data_tb <- get_data()
+
+# DATA: HYDRO-GEOLOGICAL AND EXTREME TEMPERATURES DISASTERS' FILTERED SIM SYSTEM 
+hydrogeo_extemp_tb <- data_tb %>% 
+  dplyr::filter(!(cause %in% c("Lightning",
+                               "Sunlight",
+                               "Volcano",
+                               "Other")))
+
+# DATA: JUST FOR 2011 TRAGEDY
+serrana_interval <- list(lubridate::as_date("2011-01-01"),
+                         lubridate::as_date("2011-12-31") )
+
+serrana_tb <- hydrogeo_extemp_tb %>%
+  dplyr::mutate(state_death_id = stringr::str_sub(death_city, 1, 2)) %>%
+  dplyr::filter(death_date >= serrana_interval[[1]],
+                death_date <  serrana_interval[[2]], 
+                cause %in% c("Cataclismyc", "Landslide"),
+                state_death_id %in% "33") %>% 
+  dplyr::select(-state_death_id)
+
+# DATA: WITHOUT 2011 TRAGEDY
+hydrogeo_extemp_no_serrana_tb <- hydrogeo_extemp_tb %>%
+  dplyr::mutate(state_death_id = stringr::str_sub(death_city, 1, 2)) %>%
+  dplyr::filter(
+    !death_date >= serrana_interval[[1]]      |
+    !death_date <  serrana_interval[[2]]      | 
+    !cause %in% c("Cataclismyc", "Landslide") |
+    !state_death_id %in% "33"
+    ) %>% 
+  dplyr::select(-state_death_id)
+  
+stopifnot(nrow(hydrogeo_extemp_tb) == nrow(serrana_tb) + nrow(hydrogeo_extemp_no_serrana_tb))
+
+```
+
+
+
+```{r plot_causes_cumsum, echo=FALSE, fig.width = 7, fig.height = 5}
+
+# TOTAL N. OF DEATHS DUE TO ALL FORCES OF NATURE
+data_tb %>%
+    dplyr::group_by(cause, death_year) %>%
+    dplyr::summarize(fatalities = dplyr::n()) %>%
+    dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(cause, death_year) %>%
+    ggplot2::ggplot(ggplot2::aes(x = death_year,
+                                 y = cumsum,
+                                 color = cause,
+                                 group = cause)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line() +
+    ggplot2::xlab("Year") +
+    ggplot2::ylab("Cumulative number of fatalities") +
+    ggplot2::ggtitle("1 Cumulative sum of deaths by forces of nature") +
+    ggplot2::scale_color_brewer(palette = "Paired")
+
+
+# TOTAL N. OF DEATHS DUE TO HYDRO-GEO AND EXT TEMP CAUSES
+hydrogeo_extemp_tb %>%
+    dplyr::group_by(cause, death_year) %>%
+    dplyr::summarize(fatalities = dplyr::n()) %>%
+    dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(cause, death_year) %>%
+    ggplot2::ggplot(ggplot2::aes(x = death_year,
+                                 y = cumsum,
+                                 color = cause,
+                                 group = cause)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line() +
+    ggplot2::xlab("Year") +
+    ggplot2::ylab("Cumulative number of fatalities") +
+    ggplot2::ggtitle("Cumulative sum of deaths by hydro-geological and extreme temperature events") +
+    ggplot2::scale_color_brewer(palette = "Paired")
+
+```
+
+
+
+```{r plot_cumsum1, echo=FALSE, fig.width = 7, fig.height = 5}
+
+# CUMULATIVE DEATHS BY HYDRO-GEO AND EXT TEMP CAUSES
+# TODO: REVIEW TITTLE
+hydrogeo_extemp_tb %>%
+    dplyr::group_by(death_year) %>%
+    dplyr::summarize(fatalities = dplyr::n(), 
+                     .groups = "drop") %>%
+    dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+    dplyr::arrange(death_year) %>%
+    ggplot2::ggplot(ggplot2::aes(x = death_year,
+                                 y = cumsum)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line() +
+    ggplot2::xlab("Year") +
+    ggplot2::ylab("Cumulative number of fatalities") +
+    ggplot2::ggtitle("Cumulative number of deaths due to hydro-geo and ext temp events")
+
+
+
+# CUMULATIVE DEATHS BY HYDRO-GEO AND EXT TEMP CAUSES W/O 2011 TRAGEDY
+# TODO: REVIEW TITTLE
+hydrogeo_extemp_no_serrana_tb %>%
+    dplyr::group_by(death_year) %>%
+    dplyr::summarize(fatalities = dplyr::n(), 
+                     .groups = "drop") %>%
+    dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+    dplyr::arrange(death_year) %>%
+    ggplot2::ggplot(ggplot2::aes(x = death_year,
+                                 y = cumsum)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line() +
+    ggplot2::xlab("Year") +
+    ggplot2::ylab("Cumulative number of fatalities") +
+    ggplot2::ggtitle("Cumulative number of deaths due to hydro-geo and ext temp events w/o 2011 tragedy")
+
+
+```
+
+
+
+```{r plot_total1, echo=FALSE, fig.width = 7, fig.height = 5}
+
+# BY YEAR: HYDRO-GEO AND EXT TEMP CAUSES
+# TODO: REVIEW TITTLE
+hydrogeo_extemp_tb %>%
+    dplyr::group_by(death_year) %>%
+    dplyr::summarize(fatalities = dplyr::n(), 
+                     .groups = "drop") %>%
+    dplyr::mutate(moving_average = RcppRoll::roll_mean(fatalities, 
+                                                       n = 5, 
+                                                       align = "right", 
+                                                       fill = NA,
+                                                       na.rm = TRUE))  %>%
+    dplyr::arrange(death_year) %>%
+    ggplot2::ggplot(ggplot2::aes(x = death_year,
+                                 y = fatalities)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line(ggplot2::aes(x = death_year,
+                                    y = moving_average),
+                       color = "blue") +
+    ggplot2::xlab("Year") +
+    ggplot2::ylab("Number of fatalities") +
+    ggplot2::ggtitle("Total number of deaths due to hydro-geo and ext temp eventes by year")
+
+
+
+# BY YEAR: HYDRO-GEO AND EXT TEMP CAUSES W/O 2011 TRAGEDY
+# TODO: REVIEW TITTLE
+hydrogeo_extemp_no_serrana_tb %>%
+    dplyr::group_by(death_year) %>%
+    dplyr::summarize(fatalities = dplyr::n(), 
+                     .groups = "drop") %>%
+    dplyr::mutate(moving_average = RcppRoll::roll_mean(fatalities, 
+                                                       n = 5, 
+                                                       align = "right", 
+                                                       fill = NA,
+                                                       na.rm = TRUE))  %>%
+    dplyr::arrange(death_year) %>%
+    ggplot2::ggplot(ggplot2::aes(x = death_year,
+                                 y = fatalities)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line(ggplot2::aes(x = death_year,
+                                    y = moving_average),
+                       color = "blue") +
+    ggplot2::xlab("Year") +
+    ggplot2::ylab("Number of fatalities") +
+    ggplot2::ggtitle("Total number of deaths by hydro-geo and ext temp events by year w/o 2011 tragedy")
+
+```
+
+
+
+```{r plot_by_cause, echo=FALSE, fig.width = 7, fig.height = 5}
+
+# W/O 2011 TRAGEDY
+# LOGARITM
+hydrogeo_extemp_no_serrana_tb %>%
+    dplyr::group_by(death_year, cause) %>%
+    dplyr::summarize(fatalities = log(dplyr::n()),
+                     .groups = "drop") %>%
+    # NOTE: Util function for adding the roll means as a new column.
+    (function(x) {
+        my_data <- x %>%
+            dplyr::arrange(death_year, cause) %>%
+            tidyr::pivot_wider(id_cols = death_year,
+                               names_from = cause,
+                               values_from = fatalities)
+        my_roll <- RcppRoll::roll_mean(as.matrix(dplyr::select(my_data, 
+                                                               -death_year)),
+                                       n = 5,
+                                       align = "right",
+                                       fill = NA,
+                                       na.rm = TRUE) %>%
+            tibble::as_tibble() %>%
+            magrittr::set_names(paste(names(.), "roll_mean", sep = "_")) %>%
+            dplyr::mutate(death_year = my_data$death_year) %>%
+            tidyr::pivot_longer(!death_year) %>%
+            dplyr::rename(moving_average = value)
+        my_data %>%
+            tidyr::pivot_longer(!death_year,
+                                names_to = "cause",
+                                values_to = "fatalities") %>%
+            dplyr::bind_cols(dplyr::select(my_roll, moving_average)) %>%
+            return()
+    }) %>%
+    dplyr::arrange(death_year) %>%
+    ggplot2::ggplot(ggplot2::aes(x = death_year,
+                                 y = fatalities)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line(ggplot2::aes(x = death_year,
+                                    y = moving_average),
+                       color = "blue") +
+    ggplot2::facet_wrap(~cause,
+                        ncol = 3) +
+    ggplot2::xlab("Year") +
+    ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ggplot2::ylab("Logarithm of the number of fatalities") +
+    ggplot2::ggtitle("Number of deaths by hydro-geo and ext temp events w/o 2011 tragedy")
+
+```
+
+
+
+```{r plot_causes, echo=FALSE, fig.width = 7, fig.height = 5}
+
+# DEATHS HIDRO-GEO CAUSES
+hydrogeo_extemp_tb %>%
+    dplyr::group_by(cause, death_year) %>%
+    dplyr::summarize(fatalities = dplyr::n(), 
+                     .groups = "drop") %>%
+    dplyr::arrange(cause, death_year) %>%
+    dplyr::filter(cause %in% c("Cataclismyc",
+                               "Cataclismyc and Floods",
+                               "Earth surface and Eruption",
+                               "Flood",
+                               "Landslide",
+                               "Earthquake")) %>%             
+    dplyr::filter(!is.na(cause), !is.na(death_year)) %>%
+    ggplot2::ggplot(ggplot2::aes(x = death_year,
+                                 y = fatalities,
+                                 color = cause,
+                                 group = cause)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line() +
+    ggplot2::xlab("Year") +
+    ggplot2::ylab("Number of fatalities") +
+    ggplot2::ggtitle("Death due to hydro-geological events") + 
+    ggplot2::scale_color_brewer(palette = "Dark2")
+
+
+
+# DEATHS HIDRO-GEO CAUSES: W/O SERRANA DISASTER
+hydrogeo_extemp_no_serrana_tb %>%
+    dplyr::group_by(cause, death_year) %>%
+    dplyr::summarize(fatalities = dplyr::n(), 
+                     .groups = "drop") %>%
+    dplyr::arrange(cause, death_year) %>%
+    dplyr::filter(cause %in% c("Cataclismyc",
+                               "Cataclismyc and Floods",
+                               "Earth surface and Eruption",
+                               "Flood",
+                               "Landslide",
+                               "Earthquake")) %>%             
+    dplyr::filter(!is.na(cause), !is.na(death_year)) %>%
+    ggplot2::ggplot(ggplot2::aes(x = death_year,
+                                 y = fatalities,
+                                 color = cause,
+                                 group = cause)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line() +
+    ggplot2::xlab("Year") +
+    ggplot2::ylab("Number of fatalities") +
+    ggplot2::ggtitle("Death due to hydro-geological events w/o 2011 tragedy") + 
+    ggplot2::scale_color_brewer(palette = "Dark2")
+
+
+
+# DEATHs EXTREME TEMPERATURE CAUSE
+hydrogeo_extemp_tb  %>%
+    dplyr::group_by(cause, death_year) %>%
+    dplyr::summarize(fatalities = dplyr::n(), 
+                     .groups = "drop") %>%
+    dplyr::arrange(cause, death_year) %>%
+    dplyr::filter(cause %in% c("Cold",
+                               "Heat")) %>%             
+    dplyr::filter(!is.na(cause), !is.na(death_year)) %>%
+    ggplot2::ggplot(ggplot2::aes(x = death_year,
+                                 y = fatalities,
+                                 color = cause,
+                                 group = cause)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line() +
+    ggplot2::xlab("Year") +
+    ggplot2::ylab("Number of fatalities") +
+    ggplot2::ggtitle("Death due to extreme temperature") + 
+    ggplot2::scale_color_brewer(palette = "Set1")
+
+```
+
+
+
+```{r cause_state, echo=FALSE, fig.width = 10, fig.height = 7}
+
+state_tb <- brazildatamortality::state_sf %>% 
+  sf::st_set_geometry(NULL) %>% 
+  dplyr::mutate(code_state = as.character(code_state))
+
+# BY STATE HYDRO-GEO CAUSES
+hydrogeo_extemp_tb %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::group_by(death_year, cause, abbrev_state) %>%
+  dplyr::summarize(fatalities = dplyr::n(), 
+                   .groups = "drop") %>%
+  dplyr::filter(cause %in% c("Cataclismyc",
+                             "Cataclismyc and Floods",
+                             "Earth surface and Eruption",
+                             "Flood",
+                             "Landslide",
+                             "Earthquake")) %>%
+  #tidyr::drop_na() %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = fatalities, 
+                               color = cause, 
+                               group = cause)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  ggplot2::facet_wrap(vars(abbrev_state)) +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Deaths due to hydro-geological events by state") +
+  ggplot2::scale_color_brewer(palette = "Dark2") +
+  ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+
+# BY STATE HYDRO-GEO CAUSES W/O SERRANA DISASTER
+hydrogeo_extemp_no_serrana_tb %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::group_by(death_year, cause, abbrev_state) %>%
+  dplyr::summarize(fatalities = dplyr::n(), 
+                   .groups = "drop") %>%
+  dplyr::filter(cause %in% c("Cataclismyc",
+                             "Cataclismyc and Floods",
+                             "Earth surface and Eruption",
+                             "Flood",
+                             "Landslide",
+                             "Earthquake")) %>%
+  tidyr::drop_na() %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = fatalities, 
+                               color = cause, 
+                               group = cause)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  ggplot2::facet_wrap(vars(abbrev_state)) +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Deaths due to hydro-geological events by state w/o 2011 tragedy") +
+  ggplot2::scale_color_brewer(palette = "Dark2") +
+  ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+# BY STATE EXTREME TEMP CAUSES 
+hydrogeo_extemp_tb %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::group_by(death_year, cause, abbrev_state) %>%
+  dplyr::summarize(fatalities = dplyr::n(), 
+                   .groups = "drop") %>%
+  dplyr::filter(cause %in% c("Cold",
+                             "Heat")) %>%
+  tidyr::drop_na() %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = fatalities, 
+                               color = cause, 
+                               group = cause)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  ggplot2::facet_wrap(vars(abbrev_state)) +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Deaths due to extreme temepratures by state") +
+  ggplot2::scale_color_brewer(palette = "Set1") +
+  ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+```
+
+
+
+```{r cause_region, echo=FALSE, fig.width = 10, fig.height = 7}
+
+# BY REGION HYDRO-GEO (NE, S, N, SE, CO)
+hydrogeo_extemp_tb %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::group_by(death_year, cause, name_region) %>%
+  dplyr::summarize(fatalities = dplyr::n(), 
+                   .groups = "drop") %>%
+  dplyr::filter(cause %in% c("Cataclismyc",
+                             "Cataclismyc and Floods",
+                             "Earth surface and Eruption",
+                             "Flood",
+                             "Landslide",
+                             "Earthquake")) %>%
+  tidyr::drop_na() %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = fatalities, 
+                               color = cause, 
+                               group = cause)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  ggplot2::facet_wrap(vars(name_region)) +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Deaths due to hydro-geological events by region") + 
+  ggplot2::scale_color_brewer(palette = "Dark2")
+
+# BY REGION HYDRO-GEO W/O SERRANA DISASTER
+hydrogeo_extemp_no_serrana_tb %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::group_by(death_year, cause, name_region) %>%
+  dplyr::summarize(fatalities = dplyr::n(), 
+                   .groups = "drop") %>%
+  dplyr::filter(cause %in% c("Cataclismyc",
+                             "Cataclismyc and Floods",
+                             "Earth surface and Eruption",
+                             "Flood",
+                             "Landslide",
+                             "Earthquake")) %>%
+  tidyr::drop_na() %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = fatalities, 
+                               color = cause, 
+                               group = cause)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  ggplot2::facet_wrap(vars(name_region)) +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Deaths due to hydro-geological events by region w/o 2011 tragedy") + 
+  ggplot2::scale_color_brewer(palette = "Dark2")
+
+
+
+# BY REGION EXTR TEMP (NE, S, N, SE, CO)
+hydrogeo_extemp_tb %>%
+  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+  dplyr::left_join(state_tb, by = "code_state") %>% 
+  dplyr::group_by(death_year, cause, name_region) %>%
+  dplyr::summarize(fatalities = dplyr::n(), 
+                   .groups = "drop") %>%
+  dplyr::filter(cause %in% c("Cold",
+                             "Heat")) %>%
+  tidyr::drop_na() %>%
+  ggplot2::ggplot(ggplot2::aes(x = death_year,
+                               y = fatalities, 
+                               color = cause, 
+                               group = cause)) +
+  ggplot2::geom_point() +
+  ggplot2::geom_line() +
+  ggplot2::facet_wrap(vars(name_region)) +
+  ggplot2::xlab("Year") +
+  ggplot2::ylab("Number of fatalities") +
+  ggplot2::ggtitle("Deaths due to extreme temperatures by region") +
+  ggplot2::scale_color_brewer(palette = "Set1")
+
+```
+
+
+
+## SOCIAL ANALYSIS
+## TODO: RUN SOCIAL ANALISYS EXCLUSIVELY FOR data_10
+## TODO: JOIN BARCHELOR W/ BARCHELOR INCOMPLETE
+
+
+
+
