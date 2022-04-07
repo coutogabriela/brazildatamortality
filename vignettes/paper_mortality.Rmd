@@ -164,6 +164,8 @@ hydrogeo_extemp_light_tb %>%
     ggplot2::xlab("Year") +
     ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ggplot2::ylab("Logarithm of the number of fatalities") +
+    # ggplot2::geom_vline(xintercept = 2015, linetype = "dashed") +
+    # ggplot2::geom_vline(xintercept = 2019, linetype = "dashed") +
     ggplot2::ggtitle("Number of fatalities by categories of analysis")  + 
     ggplot2::theme_bw()
 
@@ -231,7 +233,6 @@ hydrogeo_extemp_light_tb %>%
 
 ```{r plot_causes, echo=FALSE, fig.width = 7, fig.height = 5}
 
-# DEATHS HIDRO-GEO CAUSES
 hydrogeo_extemp_light_tb %>%
     dplyr::mutate(cause = dplyr::recode(
     cause,
@@ -253,7 +254,8 @@ hydrogeo_extemp_light_tb %>%
                                "Earth movement",
                                "Heat",
                                "Storm",
-                               "Cold")) %>%             
+                               "Cold",
+                               "Landslide")) %>%             
     dplyr::filter(!is.na(cause), !is.na(death_year)) %>%
     ggplot2::ggplot(ggplot2::aes(x = death_year,
                                  y = fatalities,
@@ -263,7 +265,52 @@ hydrogeo_extemp_light_tb %>%
     ggplot2::geom_line() +
     ggplot2::xlab("Year") +
     ggplot2::ylab("Number of fatalities") +
+    ggplot2::geom_vline(xintercept = 2015, linetype = "dashed") +
+    ggplot2::geom_vline(xintercept = 2019, linetype = "dashed") +
     ggplot2::ggtitle("Death due to forces of nature") + 
+    ggplot2::scale_color_brewer(palette = "Dark2") +
+    ggplot2::theme_bw()
+
+# DEATHS HIDRO-GEO CAUSES
+hydrogeo_extemp_light_tb %>%
+    #
+    # NOTE: Excude deaths from Mariana 2015 & Brumadinho 2019.
+    dplyr::filter(!(death_city %in% c("310900", "314000"))) %>%
+    #
+    dplyr::mutate(cause = dplyr::recode(
+    cause,
+    "Lightning"                           = "Lightning",
+    "Earth surface movement and Eruption" = "Earth movement",
+    "Heat"                                = "Heat",
+    "Cataclismyc and Floods"              = "Storm",
+    "Cold"                                = "Cold",
+    "Landslide"                           = "Earth movement",
+    "Cataclismyc"                         = "Storm",                       
+    "Flood"                               = "Storm",
+    "Earthquake"                          = "Earth movement"
+  )) %>%
+    dplyr::group_by(cause, death_year) %>%
+    dplyr::summarize(fatalities = dplyr::n(), 
+                     .groups = "drop") %>%
+    dplyr::arrange(cause, death_year) %>%
+    dplyr::filter(cause %in% c("Lightning",
+                               "Earth movement",
+                               "Heat",
+                               "Storm",
+                               "Cold",
+                               "Landslide")) %>%             
+    dplyr::filter(!is.na(cause), !is.na(death_year)) %>%
+    ggplot2::ggplot(ggplot2::aes(x = death_year,
+                                 y = fatalities,
+                                 color = cause,
+                                 group = cause)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line() +
+    ggplot2::xlab("Year") +
+    ggplot2::ylab("Number of fatalities") +
+    ggplot2::geom_vline(xintercept = 2015, linetype = "dashed") +
+    ggplot2::geom_vline(xintercept = 2019, linetype = "dashed") +
+    ggplot2::ggtitle("Death due to forces of nature (excluding Brumadinho & Mariana)") + 
     ggplot2::scale_color_brewer(palette = "Dark2") +
     ggplot2::theme_bw()
 
@@ -431,10 +478,10 @@ year_span <- hydrogeo_extemp_light_tb %>%
 year_span <- year_span + c(-1, 1)
 year_span <- year_span[1]:year_span[2]
 
-season_start <- c(summer = "12-21",
-                  fall   = "03-20",
-                  winter = "06-21",
-                  spring = "09-22")
+season_start <- c("Jan-Mar" = "12-21",
+                  "Apr-Jun" = "03-20",
+                  "Jul-Sep" = "06-21",
+                  "Oct-Dec" = "09-22")
 
 season_vec <- year_span %>% 
   tidyr::expand_grid(season_start) %>%
@@ -458,77 +505,150 @@ get_season_name <- function(x) {
   return(names(which(x == season_start)))
 }
 
+hydrogeo_extemp_light_tb %>%
+    dplyr::mutate(cause = dplyr::recode(
+        cause,
+        "Lightning"                           = "Lightning",
+        "Earth surface movement and Eruption" = "Hydrogeological",
+        "Heat"                                = "Extreme temperature",
+        "Cataclismyc and Floods"              = "Hydrogeological",
+        "Cold"                                = "Extreme temperature",
+        "Landslide"                           = "Hydrogeological",
+        "Cataclismyc"                         = "Hydrogeological",                       
+        "Flood"                               = "Hydrogeological",
+        "Earthquake"                          = "Hydrogeological"
+    )) %>%
+    dplyr::mutate(death_season = purrr::map(death_date, 
+                                            find_season),
+                  death_season = purrr::map_chr(death_season,
+                                                get_season),
+                  death_season = purrr::map_chr(death_season, 
+                                                get_season_name)) %>%
+    dplyr::mutate(death_season = factor(
+        death_season,
+        ordered = TRUE,
+        levels = names(season_start),
+        )
+    ) %>%
+    ggplot2::ggplot() + 
+    ggplot2::geom_bar(ggplot2::aes(x = death_season, 
+                                   fill = cause)) +
+    ggplot2::scale_fill_brewer(palette = "Dark2") + 
+    ggplot2::xlab("Season of death") +
+    ggplot2::ylab("Number of deaths") +
+    ggplot2::ggtitle("Number of deaths by season and cause") +
+    ggplot2::theme_bw()
 
 hydrogeo_extemp_light_tb %>%
-   dplyr::mutate(cause = dplyr::recode(
-    cause,
-    "Lightning"                           = "Lightning",
-    "Earth surface movement and Eruption" = "Hydrogeological",
-    "Heat"                                = "Extreme temperature",
-    "Cataclismyc and Floods"              = "Hydrogeological",
-    "Cold"                                = "Extreme temperature",
-    "Landslide"                           = "Hydrogeological",
-    "Cataclismyc"                         = "Hydrogeological",                       
-    "Flood"                               = "Hydrogeological",
-    "Earthquake"                          = "Hydrogeological"
-  )) %>%
-  dplyr::mutate(death_season = purrr::map(death_date, 
-                                          find_season),
-                death_season = purrr::map_chr(death_season,
-                                              get_season),
-                death_season = purrr::map_chr(death_season, 
-                                              get_season_name)) %>%
-  dplyr::mutate(death_season = factor(death_season,
-                                      ordered = TRUE,
-                                      levels = c("summer", "fall", 
-                                                 "winter", "spring"))) %>%
-  ggplot2::ggplot() + 
-  ggplot2::geom_bar(ggplot2::aes(x = death_season, 
-                                 fill = cause)) +
-  ggplot2::scale_fill_brewer(palette = "Dark2") + 
-  ggplot2::xlab("Season of death") +
-  ggplot2::ylab("Number of deaths") +
-  ggplot2::theme_bw()
-   
+    dplyr::filter(!(death_city %in% c("310900", "314000"))) %>%
+    dplyr::mutate(cause = dplyr::recode(
+        cause,
+        "Lightning"                           = "Lightning",
+        "Earth surface movement and Eruption" = "Hydrogeological",
+        "Heat"                                = "Extreme temperature",
+        "Cataclismyc and Floods"              = "Hydrogeological",
+        "Cold"                                = "Extreme temperature",
+        "Landslide"                           = "Hydrogeological",
+        "Cataclismyc"                         = "Hydrogeological",                       
+        "Flood"                               = "Hydrogeological",
+        "Earthquake"                          = "Hydrogeological"
+    )) %>%
+    dplyr::mutate(death_season = purrr::map(death_date, 
+                                            find_season),
+                  death_season = purrr::map_chr(death_season,
+                                                get_season),
+                  death_season = purrr::map_chr(death_season, 
+                                                get_season_name)) %>%
+    dplyr::mutate(death_season = factor(
+        death_season,
+        ordered = TRUE,
+        levels = names(season_start),
+        )
+    ) %>%
+    ggplot2::ggplot() + 
+    ggplot2::geom_bar(ggplot2::aes(x = death_season, 
+                                   fill = cause)) +
+    ggplot2::scale_fill_brewer(palette = "Dark2") + 
+    ggplot2::xlab("Season of death") +
+    ggplot2::ylab("Number of deaths") +
+    ggplot2::ggtitle(
+        "Number of deaths by season and cause (excluding Brumadinho & Mariana)"
+        ) +
+    ggplot2::theme_bw()
+
 ```
 
 
-## Number od deaths by month by categories
+## Number of deaths by month by categories
 ## Bars
 
 ```{r month, echo=FALSE, fig.width = 10, fig.height = 7}
 
+hydrogeo_extemp_light_tb %>%
+    dplyr::mutate(cause = dplyr::recode(
+        cause,
+        "Lightning"                           = "Lightning",
+        "Earth surface movement and Eruption" = "Hydrogeological",
+        "Heat"                                = "Extreme temperature",
+        "Cataclismyc and Floods"              = "Hydrogeological",
+        "Cold"                                = "Extreme temperature",
+        "Landslide"                           = "Hydrogeological",
+        "Cataclismyc"                         = "Hydrogeological",                       
+        "Flood"                               = "Hydrogeological",
+        "Earthquake"                          = "Hydrogeological"
+    )) %>%
+    dplyr::select(cause, death_month) %>%
+    tidyr::drop_na() %>%
+    dplyr::mutate(death_month = month.name[death_month],
+                  death_month = factor(death_month,
+                                       ordered = TRUE,
+                                       levels = c(month.name))) %>% 
+    dplyr::mutate_all(as.factor) %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_bar(ggplot2::aes(x = death_month,
+                                   fill = cause)) +
+    ggplot2::scale_fill_brewer(palette = "Dark2") +      
+    ggplot2::xlab("Month") +
+    ggplot2::ylab("Cumulative number of fatalities") +
+    ggplot2::ggtitle(
+        "Deaths by cause by month"
+    ) + 
+    ggplot2::theme_bw()
 
 hydrogeo_extemp_light_tb %>%
-   dplyr::mutate(cause = dplyr::recode(
-    cause,
-    "Lightning"                           = "Lightning",
-    "Earth surface movement and Eruption" = "Hydrogeological",
-    "Heat"                                = "Extreme temperature",
-    "Cataclismyc and Floods"              = "Hydrogeological",
-    "Cold"                                = "Extreme temperature",
-    "Landslide"                           = "Hydrogeological",
-    "Cataclismyc"                         = "Hydrogeological",                       
-    "Flood"                               = "Hydrogeological",
-    "Earthquake"                          = "Hydrogeological"
-  )) %>%
-  dplyr::select(cause, death_month) %>%
-  tidyr::drop_na() %>%
-    
-  dplyr::mutate(death_month = month.name[death_month],
-                death_month = factor(death_month,
-                                     ordered = TRUE,
-                                     levels = c(month.name))) %>% 
-    
-  dplyr::mutate_all(as.factor) %>%
-  ggplot2::ggplot() +
-  ggplot2::geom_bar(ggplot2::aes(x = death_month,
-                               fill = cause)) +
-  ggplot2::scale_fill_brewer(palette = "Dark2") +      
-  ggplot2::xlab("Month") +
-  ggplot2::ylab("Cumulative number of fatalities") +
-  ggplot2::ggtitle("Deaths by cause by month") + 
-  ggplot2::theme_bw()
+    #
+    # NOTE: Excude deaths from Mariana 2015 & Brumadinho 2019.
+    dplyr::filter(!(death_city %in% c("310900", "314000"))) %>%
+    #
+    dplyr::mutate(cause = dplyr::recode(
+        cause,
+        "Lightning"                           = "Lightning",
+        "Earth surface movement and Eruption" = "Hydrogeological",
+        "Heat"                                = "Extreme temperature",
+        "Cataclismyc and Floods"              = "Hydrogeological",
+        "Cold"                                = "Extreme temperature",
+        "Landslide"                           = "Hydrogeological",
+        "Cataclismyc"                         = "Hydrogeological",                       
+        "Flood"                               = "Hydrogeological",
+        "Earthquake"                          = "Hydrogeological"
+    )) %>%
+    dplyr::select(cause, death_month) %>%
+    tidyr::drop_na() %>%
+    dplyr::mutate(death_month = month.name[death_month],
+                  death_month = factor(death_month,
+                                       ordered = TRUE,
+                                       levels = c(month.name))) %>% 
+    dplyr::mutate_all(as.factor) %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_bar(ggplot2::aes(x = death_month,
+                                   fill = cause)) +
+    ggplot2::scale_fill_brewer(palette = "Dark2") +      
+    ggplot2::xlab("Month") +
+    ggplot2::ylab("Cumulative number of fatalities") +
+    ggplot2::ggtitle(
+        "Deaths by cause by month (excluding Brumadinho & Mariana)"
+    ) + 
+    ggplot2::theme_bw()
 
 
 ```
