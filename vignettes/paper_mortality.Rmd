@@ -38,10 +38,13 @@ hydrogeo_extemp_tb <- data_tb %>%
                                "Volcano",
                                "Other")))
 
-hydrogeo_extemp_light_tb <- data_tb %>% 
-  dplyr::filter(!(cause %in% c("Sunlight",
-                               "Volcano",
-                               "Other")))
+# NOTE: Brumadinho & Mariana are excluded!
+hydrogeo_extemp_light_tb <- 
+    data_tb %>% 
+    dplyr::filter(!(cause %in% c("Sunlight",
+                                 "Volcano",
+                                 "Other"))) %>%
+    dplyr::filter(!(death_city %in% c("310900", "314000")))
 
 
 serrana_interval <- list(lubridate::as_date("2011-01-01"),
@@ -76,32 +79,33 @@ stopifnot(nrow(hydrogeo_extemp_tb) == nrow(serrana_tb) + nrow(hydrogeo_extemp_no
 
 ```{r fig_mortality_pie, echo=FALSE, fig.width = 10, fig.height = 7}
 
-hydrogeo_extemp_light_tb %>%
-  dplyr::mutate(cause = dplyr::recode(
-    cause,
-    "Lightning"                           = "Lightning",
-    "Earth surface movement and Eruption" = "Earth movement",
-    "Heat"                                = "Heat",
-    "Cataclismyc and Floods"              = "Storm",
-    "Cold"                                = "Cold",
-    "Landslide"                           = "Earth movement",
-    "Cataclismyc"                         = "Storm",                       
-    "Flood"                               = "Storm",
-    "Earthquake"                          = "Earth movement"
-  )) %>%    
-  dplyr::count(cause) %>%
-  dplyr::arrange(dplyr::desc(n)) %>%
-  dplyr::mutate(cause_fct = factor(cause, 
-                                   levels = rev(.$cause)),
-                proportion = round(100 * (n / sum(n)), 
-                                   digits = 1)) %>%
-  dplyr::mutate(ypos = c(27.8, 65.4, 81.8, 90.1, 93.4)) %>%
-  ggplot2::ggplot(ggplot2::aes(x = "", y = proportion, fill = cause_fct)) +
-  ggplot2::geom_bar(stat = "identity", width = 1, color = "white") +
-  ggplot2::coord_polar("y", start = 0) +
-  ggplot2::theme(legend.position = "none") +
-  ggplot2::theme_void() +
-  ggplot2::ggtitle("Percentage of fatalities by categories of analysis")    
+# NOTE: Reviewer asked to leave this figure out!
+# hydrogeo_extemp_light_tb %>%
+#   dplyr::mutate(cause = dplyr::recode(
+#     cause,
+#     "Lightning"                           = "Lightning",
+#     "Earth surface movement and Eruption" = "Landslide",
+#     "Heat"                                = "Heat",
+#     "Cataclismyc and Floods"              = "Storm",
+#     "Cold"                                = "Cold",
+#     "Landslide"                           = "Landslide",
+#     "Cataclismyc"                         = "Storm",                       
+#     "Flood"                               = "Storm",
+#     "Earthquake"                          = "Landslide"
+#   )) %>%    
+#   dplyr::count(cause) %>%
+#   dplyr::arrange(dplyr::desc(n)) %>%
+#   dplyr::mutate(cause_fct = factor(cause, 
+#                                    levels = rev(.$cause)),
+#                 proportion = round(100 * (n / sum(n)), 
+#                                    digits = 1)) %>%
+#   dplyr::mutate(ypos = c(27.8, 65.4, 81.8, 90.1, 93.4)) %>%
+#   ggplot2::ggplot(ggplot2::aes(x = "", y = proportion, fill = cause_fct)) +
+#   ggplot2::geom_bar(stat = "identity", width = 1, color = "white") +
+#   ggplot2::coord_polar("y", start = 0) +
+#   ggplot2::theme(legend.position = "none") +
+#   ggplot2::theme_void() +
+#   ggplot2::ggtitle("Percentage of fatalities by categories of analysis")    
 
 ```
 
@@ -111,21 +115,22 @@ hydrogeo_extemp_light_tb %>%
 
 ```{r fig_log, echo=FALSE, fig.width = 10, fig.height = 7}
 
-hydrogeo_extemp_light_tb %>%
-  dplyr::mutate(cause = dplyr::recode(
-    cause,
-    "Lightning"                           = "Lightning",
-    "Earth surface movement and Eruption" = "Earth movement",
-    "Heat"                                = "Heat",
-    "Cataclismyc and Floods"              = "Storm",
-    "Cold"                                = "Cold",
-    "Landslide"                           = "Earth movement",
-    "Cataclismyc"                         = "Storm",                       
-    "Flood"                               = "Storm",
-    "Earthquake"                          = "Earth movement"
-  )) %>%
+plot_tb <-
+    hydrogeo_extemp_light_tb %>%
+    dplyr::mutate(cause = dplyr::recode(
+        cause,
+        "Lightning"                           = "Lightning",
+        "Earth surface movement and Eruption" = "Landslide",
+        "Heat"                                = "Heat",
+        "Cataclismyc and Floods"              = "Storm",
+        "Cold"                                = "Cold",
+        "Landslide"                           = "Landslide",
+        "Cataclismyc"                         = "Storm",                       
+        "Flood"                               = "Storm",
+        "Earthquake"                          = "Landslide"
+    )) %>%
     dplyr::group_by(death_year, cause) %>%
-    dplyr::summarize(fatalities = log(dplyr::n()),
+    dplyr::summarize(fatalities = dplyr::n(),
                      .groups = "drop") %>%
     # NOTE: Util function for adding the roll means as a new column.
     (function(x) {
@@ -151,24 +156,42 @@ hydrogeo_extemp_light_tb %>%
                                 values_to = "fatalities") %>%
             dplyr::bind_cols(dplyr::select(my_roll, moving_average)) %>%
             return()
-    }) %>%
+    }) 
+mean_tb <-
+    plot_tb %>%
+    dplyr::group_by(cause) %>%
+    dplyr::summarize(my_mean = mean(fatalities, na.rm = TRUE))
+fig_3 <-
+    plot_tb %>%
     dplyr::arrange(death_year) %>%
     ggplot2::ggplot(ggplot2::aes(x = death_year,
                                  y = fatalities)) +
-    ggplot2::geom_point() +
     ggplot2::geom_line(ggplot2::aes(x = death_year,
-                                    y = moving_average),
-                       color = "blue") +
-    ggplot2::facet_wrap(~cause,
-                        ncol = 2) +
+                                    y = moving_average,
+                                    group = cause,
+                                    color = cause)) +
+    ggplot2::scale_y_log10() +
     ggplot2::xlab("Year") +
     ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-    ggplot2::ylab("Logarithm of the number of fatalities") +
-    # ggplot2::geom_vline(xintercept = 2015, linetype = "dashed") +
-    # ggplot2::geom_vline(xintercept = 2019, linetype = "dashed") +
-    ggplot2::ggtitle("Number of fatalities by categories of analysis")  + 
-    ggplot2::theme_bw()
-
+    ggplot2::ylab("Number of fatalities") +
+    #ggplot2::ggtitle("Moving average (5 years) of fatalities")  + 
+    ggplot2::theme_bw() +
+    ggplot2::geom_hline(ggplot2::aes(yintercept = my_mean,
+                                     group = cause,
+                                     color = cause), 
+                        mean_tb, 
+                        linetype = "dotted",
+                        size = 0.5)
+fig_3
+ggplot2::ggsave(plot = fig_3,
+                filename = "~/Desktop/fig3.jpg",
+                width = 148.5, 
+                height = 105,
+                units = "mm")
+rm(fig_3)
+rm(mean_tb)
+rm(plot_tb)
+                
 
 ```
 
@@ -179,38 +202,38 @@ hydrogeo_extemp_light_tb %>%
 
 ```{r fig_cum, echo=FALSE, fig.width = 10, fig.height = 7}
 
-
-hydrogeo_extemp_light_tb %>%
-  dplyr::mutate(cause = dplyr::recode(
-    cause,
-    "Lightning"                           = "Lightning",
-    "Earth surface movement and Eruption" = "Earth movement",
-    "Heat"                                = "Heat",
-    "Cataclismyc and Floods"              = "Storm",
-    "Cold"                                = "Cold",
-    "Landslide"                           = "Earth movement",
-    "Cataclismyc"                         = "Storm",                       
-    "Flood"                               = "Storm",
-    "Earthquake"                          = "Earth movement"
-  )) %>%
+fig_4 <- 
+    hydrogeo_extemp_light_tb %>%
+    dplyr::mutate(cause = dplyr::recode(
+        cause,
+        "Lightning"                           = "Lightning",
+        "Earth surface movement and Eruption" = "Landslide",
+        "Heat"                                = "Heat",
+        "Cataclismyc and Floods"              = "Storm",
+        "Cold"                                = "Cold",
+        "Landslide"                           = "Landslide",
+        "Cataclismyc"                         = "Storm",                       
+        "Flood"                               = "Storm",
+        "Earthquake"                          = "Landslide"
+    )) %>%
     dplyr::group_by(death_year, cause) %>%
     dplyr::summarize(fatalities = dplyr::n(), 
                      .groups = "drop") %>% 
-  (function(x) {
-    total_year <- x %>%
-      dplyr::group_by(death_year) %>%
-      dplyr::summarize(fatalities = sum(fatalities),
-                       .groups = "drop") %>%
-      dplyr::mutate(cause = "Total_year") %>%
-      dplyr::select(death_year, cause, fatalities)
-    x %>% 
-      dplyr::bind_rows(total_year) %>%
-      dplyr::arrange(death_year, cause) %>% 
-      return()
-  }) %>%
-  dplyr::group_by(cause) %>%
-  dplyr::mutate(cumsum = cumsum(fatalities)) %>%
-  dplyr::ungroup() %>%
+    (function(x) {
+        total_year <- x %>%
+            dplyr::group_by(death_year) %>%
+            dplyr::summarize(fatalities = sum(fatalities),
+                             .groups = "drop") %>%
+            dplyr::mutate(cause = "Total_year") %>%
+            dplyr::select(death_year, cause, fatalities)
+        x %>% 
+            dplyr::bind_rows(total_year) %>%
+            dplyr::arrange(death_year, cause) %>% 
+            return()
+    }) %>%
+    dplyr::group_by(cause) %>%
+    dplyr::mutate(cumsum = cumsum(fatalities)) %>%
+    dplyr::ungroup() %>%
     dplyr::arrange(death_year) %>%
     ggplot2::ggplot(ggplot2::aes(x = death_year,
                                  y = cumsum,
@@ -220,9 +243,16 @@ hydrogeo_extemp_light_tb %>%
     ggplot2::geom_line() +
     ggplot2::xlab("Year") +
     ggplot2::ylab("Cumulative number of fatalities") +
-    ggplot2::ggtitle("Cumulative number of fatalities by cause from 1979 to 2019")+
+    #ggplot2::ggtitle("Cumulative number of fatalities by cause from 1979 to 2019") +
     ggplot2::scale_color_brewer(palette = "Dark2") +
     ggplot2::theme_bw()
+fig_4
+ggplot2::ggsave(plot = fig_4,
+                filename = "~/Desktop/fig4.jpg",
+                width = 148.5, 
+                height = 105,
+                units = "mm")
+rm(fig_4)
 
 ```
 
@@ -233,25 +263,26 @@ hydrogeo_extemp_light_tb %>%
 
 ```{r plot_causes, echo=FALSE, fig.width = 7, fig.height = 5}
 
-hydrogeo_extemp_light_tb %>%
+fig_5 <- 
+    hydrogeo_extemp_light_tb %>%
     dplyr::mutate(cause = dplyr::recode(
-    cause,
-    "Lightning"                           = "Lightning",
-    "Earth surface movement and Eruption" = "Earth movement",
-    "Heat"                                = "Heat",
-    "Cataclismyc and Floods"              = "Storm",
-    "Cold"                                = "Cold",
-    "Landslide"                           = "Earth movement",
-    "Cataclismyc"                         = "Storm",                       
-    "Flood"                               = "Storm",
-    "Earthquake"                          = "Earth movement"
-  )) %>%
+        cause,
+        "Lightning"                           = "Lightning",
+        "Earth surface movement and Eruption" = "Landslide",
+        "Heat"                                = "Heat",
+        "Cataclismyc and Floods"              = "Storm",
+        "Cold"                                = "Cold",
+        "Landslide"                           = "Landslide",
+        "Cataclismyc"                         = "Storm",                       
+        "Flood"                               = "Storm",
+        "Earthquake"                          = "Landslide"
+    )) %>%
     dplyr::group_by(cause, death_year) %>%
     dplyr::summarize(fatalities = dplyr::n(), 
                      .groups = "drop") %>%
     dplyr::arrange(cause, death_year) %>%
     dplyr::filter(cause %in% c("Lightning",
-                               "Earth movement",
+                               "Landslide",
                                "Heat",
                                "Storm",
                                "Cold",
@@ -265,54 +296,16 @@ hydrogeo_extemp_light_tb %>%
     ggplot2::geom_line() +
     ggplot2::xlab("Year") +
     ggplot2::ylab("Number of fatalities") +
-    ggplot2::geom_vline(xintercept = 2015, linetype = "dashed") +
-    ggplot2::geom_vline(xintercept = 2019, linetype = "dashed") +
-    ggplot2::ggtitle("Death due to forces of nature") + 
+    #ggplot2::ggtitle("Death due to forces of nature") + 
     ggplot2::scale_color_brewer(palette = "Dark2") +
     ggplot2::theme_bw()
-
-# DEATHS HIDRO-GEO CAUSES
-hydrogeo_extemp_light_tb %>%
-    #
-    # NOTE: Excude deaths from Mariana 2015 & Brumadinho 2019.
-    dplyr::filter(!(death_city %in% c("310900", "314000"))) %>%
-    #
-    dplyr::mutate(cause = dplyr::recode(
-    cause,
-    "Lightning"                           = "Lightning",
-    "Earth surface movement and Eruption" = "Earth movement",
-    "Heat"                                = "Heat",
-    "Cataclismyc and Floods"              = "Storm",
-    "Cold"                                = "Cold",
-    "Landslide"                           = "Earth movement",
-    "Cataclismyc"                         = "Storm",                       
-    "Flood"                               = "Storm",
-    "Earthquake"                          = "Earth movement"
-  )) %>%
-    dplyr::group_by(cause, death_year) %>%
-    dplyr::summarize(fatalities = dplyr::n(), 
-                     .groups = "drop") %>%
-    dplyr::arrange(cause, death_year) %>%
-    dplyr::filter(cause %in% c("Lightning",
-                               "Earth movement",
-                               "Heat",
-                               "Storm",
-                               "Cold",
-                               "Landslide")) %>%             
-    dplyr::filter(!is.na(cause), !is.na(death_year)) %>%
-    ggplot2::ggplot(ggplot2::aes(x = death_year,
-                                 y = fatalities,
-                                 color = cause,
-                                 group = cause)) +
-    ggplot2::geom_point() +
-    ggplot2::geom_line() +
-    ggplot2::xlab("Year") +
-    ggplot2::ylab("Number of fatalities") +
-    ggplot2::geom_vline(xintercept = 2015, linetype = "dashed") +
-    ggplot2::geom_vline(xintercept = 2019, linetype = "dashed") +
-    ggplot2::ggtitle("Death due to forces of nature (excluding Brumadinho & Mariana)") + 
-    ggplot2::scale_color_brewer(palette = "Dark2") +
-    ggplot2::theme_bw()
+fig_5
+ggplot2::ggsave(plot = fig_5,
+                filename = "~/Desktop/fig5.jpg",
+                width = 148.5, 
+                height = 105,
+                units = "mm")
+rm(fig_5)
 
 ```
 
@@ -322,31 +315,33 @@ hydrogeo_extemp_light_tb %>%
 
 ```{r map_state_cum, echo=FALSE, fig.width = 10, fig.height = 7}
 
-state_tb <- brazildatamortality::state_sf %>% 
-  sf::st_set_geometry(NULL) %>% 
-  dplyr::mutate(code_state = as.character(code_state))
+state_tb <- 
+    brazildatamortality::state_sf %>% 
+    sf::st_set_geometry(NULL) %>% 
+    dplyr::mutate(code_state = as.character(code_state))
 
 
 # 3 maps_one category by map
 
-state_data <- hydrogeo_extemp_light_tb %>%
-  dplyr::mutate(cause = dplyr::recode(
-    cause,
-    "Lightning"                           = "Lightning",
-    "Earth surface movement and Eruption" = "Hydrogeological",
-    "Heat"                                = "Extreme temperature",
-    "Cataclismyc and Floods"              = "Hydrogeological",
-    "Cold"                                = "Extreme temperature",
-    "Landslide"                           = "Hydrogeological",
-    "Cataclismyc"                         = "Hydrogeological",                       
-    "Flood"                               = "Hydrogeological",
-    "Earthquake"                          = "Hydrogeological"
-  )) %>%
-  dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
-  dplyr::left_join(state_tb, by = "code_state") %>% 
-  dplyr::group_by(abbrev_state, cause) %>%
-  dplyr::summarize(fatalities = dplyr::n()) %>%
-  dplyr::ungroup()
+state_data <- 
+    hydrogeo_extemp_light_tb %>%
+    dplyr::mutate(cause = dplyr::recode(
+        cause,
+        "Lightning"                           = "Lightning",
+        "Earth surface movement and Eruption" = "Hydrogeological",
+        "Heat"                                = "Extreme temperature",
+        "Cataclismyc and Floods"              = "Hydrogeological",
+        "Cold"                                = "Extreme temperature",
+        "Landslide"                           = "Hydrogeological",
+        "Cataclismyc"                         = "Hydrogeological",                       
+        "Flood"                               = "Hydrogeological",
+        "Earthquake"                          = "Hydrogeological"
+    )) %>%
+    dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+    dplyr::left_join(state_tb, by = "code_state") %>% 
+    dplyr::group_by(abbrev_state, cause) %>%
+    dplyr::summarize(fatalities = dplyr::n()) %>%
+    dplyr::ungroup()
 
 state_hex <- brazildatamortality::state_hex
  
@@ -355,112 +350,124 @@ plot_sf <- merge(state_hex, state_data,
                  all.x = TRUE)
 
 # Plot the states' names
-plot_sf %>%
-  ggplot2::ggplot() +
-  ggplot2::geom_sf(data = state_hex) +
-  ggplot2::geom_sf_label(ggplot2::aes(label = abbrev_state)) +
-  ggplot2::theme_bw()
+# plot_sf %>%
+#   ggplot2::ggplot() +
+#   ggplot2::geom_sf(data = state_hex) +
+#   ggplot2::geom_sf_label(ggplot2::aes(label = abbrev_state)) +
+#   ggplot2::theme_bw()
 
-plot_sf %>%
-  ggplot2::ggplot() +
-  ggplot2::geom_sf(data = state_hex) +
-  ggplot2::geom_sf(ggplot2::aes(fill = log10(fatalities)), colour = NA) +
-  ggplot2::scale_fill_viridis_c(option = 'Dark2') +
-  ggplot2::facet_wrap(~cause) +
-  ggplot2::theme_bw()
+fig_9 <- 
+    plot_sf %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_sf(data = state_hex) +
+    ggplot2::geom_sf(ggplot2::aes(fill = log10(fatalities))) +
+    ggplot2::scale_fill_viridis_c() +
+    ggplot2::facet_wrap(~cause) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(axis.text.x = element_blank(),
+                   axis.text.y = element_blank(),
+                   axis.ticks.x = element_blank(),
+                   axis.ticks.y = element_blank())
+fig_9
+ggplot2::ggsave(plot = fig_9,
+                filename = "~/Desktop/fig9.jpg",
+                width = 148.5, 
+                height = 105,
+                units = "mm")
+rm(fig_9)
 
 
 # timeframe' maps due to  hydrogeo_causes
 
-hydrogeo_causes <- c("Cataclismyc", 
-                     "Cataclismyc and Floods",
-                     "Earth surface and Eruption",
-                     "Flood",
-                     "Landslide",
-                     "Earthquake")
-for (y in c(seq(from = 1980, to = 2015, by = 5), 2019)) {
-  state_year_data <- data_tb %>%
-    dplyr::mutate(death_year = lubridate::year(death_date)) %>% 
-    dplyr::filter(cause %in% hydrogeo_causes,
-                  death_year <= y) %>% 
-    dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
-    dplyr::left_join(state_tb, by = "code_state") %>% 
-    dplyr::group_by(abbrev_state) %>%
-    dplyr::summarise(fatalities = dplyr::n()) %>% 
-    dplyr::ungroup()
-    plot_sf <- merge(state_hex, state_year_data,
-                   by = "abbrev_state",
-                   all.x = TRUE)
-  my_plot <- plot_sf %>% 
-    ggplot2::ggplot() +
-    ggplot2::geom_sf(data = state_hex) +
-    ggplot2::geom_sf(ggplot2::aes(fill = log10(fatalities)), colour = NA) +
-    viridis::scale_fill_viridis(limits = c(0, 4), oob = scales::squish) +
-    #ggplot2::geom_sf_label(ggplot2::aes(label = fatalities)) + 
-    ggplot2::ggtitle(sprintf("Hydrogeological fatalities until %s", y)) +
-    ggplot2::theme_bw()
-  print(my_plot)
-} 
+# hydrogeo_causes <- c("Cataclismyc", 
+#                      "Cataclismyc and Floods",
+#                      "Earth surface and Eruption",
+#                      "Flood",
+#                      "Landslide",
+#                      "Earthquake")
+# for (y in c(seq(from = 1980, to = 2015, by = 5), 2019)) {
+#   state_year_data <- data_tb %>%
+#     dplyr::mutate(death_year = lubridate::year(death_date)) %>% 
+#     dplyr::filter(cause %in% hydrogeo_causes,
+#                   death_year <= y) %>% 
+#     dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+#     dplyr::left_join(state_tb, by = "code_state") %>% 
+#     dplyr::group_by(abbrev_state) %>%
+#     dplyr::summarise(fatalities = dplyr::n()) %>% 
+#     dplyr::ungroup()
+#     plot_sf <- merge(state_hex, state_year_data,
+#                    by = "abbrev_state",
+#                    all.x = TRUE)
+#   my_plot <- plot_sf %>% 
+#     ggplot2::ggplot() +
+#     ggplot2::geom_sf(data = state_hex) +
+#     ggplot2::geom_sf(ggplot2::aes(fill = log10(fatalities)), colour = NA) +
+#     viridis::scale_fill_viridis(limits = c(0, 4), oob = scales::squish) +
+#     #ggplot2::geom_sf_label(ggplot2::aes(label = fatalities)) + 
+#     ggplot2::ggtitle(sprintf("Hydrogeological fatalities until %s", y)) +
+#     ggplot2::theme_bw()
+#   print(my_plot)
+# } 
 
 
 # timeframe´ map due to lightning
 
-lightning <- c("Lightning")
-for (y in c(seq(from = 1980, to = 2015, by = 5), 2019)) {
-  state_year_data <- data_tb %>%
-    dplyr::mutate(death_year = lubridate::year(death_date)) %>% 
-    dplyr::filter(cause %in% lightning,
-                  death_year <= y) %>% 
-    dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
-    dplyr::left_join(state_tb, by = "code_state") %>% 
-    dplyr::group_by(abbrev_state) %>%
-    dplyr::summarise(fatalities = dplyr::n()) %>% 
-    dplyr::ungroup()
-    plot_sf <- merge(state_hex, state_year_data,
-                   by = "abbrev_state",
-                   all.x = TRUE)
-  my_plot <- plot_sf %>% 
-    ggplot2::ggplot() +
-    ggplot2::geom_sf(data = state_hex) +
-    ggplot2::geom_sf(ggplot2::aes(fill = log10(fatalities)), colour = NA) +
-    viridis::scale_fill_viridis(limits = c(0, 4), oob = scales::squish, option = "inferno") +
-    #ggplot2::geom_sf_label(ggplot2::aes(label = fatalities)) + 
-    ggplot2::ggtitle(sprintf("Lightning deaths until %s", y)) +
-    ggplot2::theme_bw()
-  print(my_plot)
-} 
+# lightning <- c("Lightning")
+# for (y in c(seq(from = 1980, to = 2015, by = 5), 2019)) {
+#   state_year_data <- data_tb %>%
+#     dplyr::mutate(death_year = lubridate::year(death_date)) %>% 
+#     dplyr::filter(cause %in% lightning,
+#                   death_year <= y) %>% 
+#     dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+#     dplyr::left_join(state_tb, by = "code_state") %>% 
+#     dplyr::group_by(abbrev_state) %>%
+#     dplyr::summarise(fatalities = dplyr::n()) %>% 
+#     dplyr::ungroup()
+#     plot_sf <- merge(state_hex, state_year_data,
+#                    by = "abbrev_state",
+#                    all.x = TRUE)
+#   my_plot <- plot_sf %>% 
+#     ggplot2::ggplot() +
+#     ggplot2::geom_sf(data = state_hex) +
+#     ggplot2::geom_sf(ggplot2::aes(fill = log10(fatalities)), colour = NA) +
+#     viridis::scale_fill_viridis(limits = c(0, 4), oob = scales::squish, option = "inferno") +
+#     #ggplot2::geom_sf_label(ggplot2::aes(label = fatalities)) + 
+#     ggplot2::ggtitle(sprintf("Lightning deaths until %s", y)) +
+#     ggplot2::theme_bw()
+#   print(my_plot)
+# } 
 
 
 #timeframe´map due to extemp_causes
 
-extemp_causes <- c("Heat", 
-                   "Cold")
-for (y in c(seq(from = 1980, to = 2015, by = 5), 2019)) {
-  state_year_data <- data_tb %>%
-    dplyr::mutate(death_year = lubridate::year(death_date)) %>% 
-    dplyr::filter(cause %in% extemp_causes,
-                  death_year <= y) %>% 
-    dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
-    dplyr::left_join(state_tb, by = "code_state") %>% 
-    dplyr::group_by(abbrev_state) %>%
-    dplyr::summarise(fatalities = dplyr::n()) %>% 
-    dplyr::ungroup()
-    plot_sf <- merge(state_hex, state_year_data,
-                   by = "abbrev_state",
-                   all.x = TRUE)
-  my_plot <- plot_sf %>% 
-    ggplot2::ggplot() +
-    ggplot2::geom_sf(data = state_hex) +
-    ggplot2::geom_sf(ggplot2::aes(fill = log10(fatalities)), colour = NA) +
-    viridis::scale_fill_viridis(limits = c(0, 4), 
-                                oob = scales::squish, 
-                                option = "inferno") +
-    #ggplot2::geom_sf_label(ggplot2::aes(label = fatalities)) + 
-    ggplot2::ggtitle(sprintf("Extreme temperatures deaths until %s", y)) +
-    ggplot2::theme_bw()
-
-  print(my_plot)
-} 
+# extemp_causes <- c("Heat", 
+#                    "Cold")
+# for (y in c(seq(from = 1980, to = 2015, by = 5), 2019)) {
+#   state_year_data <- data_tb %>%
+#     dplyr::mutate(death_year = lubridate::year(death_date)) %>% 
+#     dplyr::filter(cause %in% extemp_causes,
+#                   death_year <= y) %>% 
+#     dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+#     dplyr::left_join(state_tb, by = "code_state") %>% 
+#     dplyr::group_by(abbrev_state) %>%
+#     dplyr::summarise(fatalities = dplyr::n()) %>% 
+#     dplyr::ungroup()
+#     plot_sf <- merge(state_hex, state_year_data,
+#                    by = "abbrev_state",
+#                    all.x = TRUE)
+#   my_plot <- plot_sf %>% 
+#     ggplot2::ggplot() +
+#     ggplot2::geom_sf(data = state_hex) +
+#     ggplot2::geom_sf(ggplot2::aes(fill = log10(fatalities)), colour = NA) +
+#     viridis::scale_fill_viridis(limits = c(0, 4), 
+#                                 oob = scales::squish, 
+#                                 option = "inferno") +
+#     #ggplot2::geom_sf_label(ggplot2::aes(label = fatalities)) + 
+#     ggplot2::ggtitle(sprintf("Extreme temperatures deaths until %s", y)) +
+#     ggplot2::theme_bw()
+# 
+#   print(my_plot)
+#} 
 
 ```
 
@@ -471,10 +478,11 @@ for (y in c(seq(from = 1980, to = 2015, by = 5), 2019)) {
 
 ```{r fig_season_cum_year, echo=FALSE, fig.width = 10, fig.height = 7}
 
-year_span <- hydrogeo_extemp_light_tb %>% 
-  dplyr::pull(death_date) %>%
-  lubridate::year() %>%
-  range()
+year_span <- 
+    hydrogeo_extemp_light_tb %>% 
+    dplyr::pull(death_date) %>%
+    lubridate::year() %>%
+    range()
 year_span <- year_span + c(-1, 1)
 year_span <- year_span[1]:year_span[2]
 
