@@ -1245,7 +1245,5 @@ plot_tb %>%
 #    ggplot2::theme(axis.text.x = element_text(angle = 270, hjust = 1)) +
 #    ggplot2::ggtitle("Extreme temperature")
 
-
-
 ```
 
