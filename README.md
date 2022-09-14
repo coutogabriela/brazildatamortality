@@ -1,64 +1,81 @@
-### Brazilian Data Mortality
 
-Original source:
-World Health Organization
-International Statistic Classification of Diseases and Related Health Problems 10th revision
-ICD10
+<!-- README.md is generated from README.Rmd. Please edit that file -->
 
-Based on death certificate that captures more than 50 variables as:
-* entity and municipality of registry,
-* entity,
-* municipality and locality of habitual residence; entity, municipality and locality of occurrence of death; sex, age, occupation, schooling, conjugal status, among others
+# brazildatamortality
 
+<!-- badges: start -->
+<!-- badges: end -->
 
-### Project: questions to be answered
+This package contains both the data and the figures presented in the
+paper “Natural Hazards Fatalities in Brazail, 1979–2019”. Below is the
+abstract of the aforementioned paper.
 
-1. What is the science problem I need to solve?
-2. What is the data that is available for this problem? Is it simple to get hold of this data? What is the volume of the data? Where is it? What is its format?
-3. What do I think I will achieve by analyzing this data? What are the expected results?
+The impact of natural hazards on nations and societies is a global
+challenge and concern. Studies worldwide have been conducted within and
+among countries, to examine the spatial distribution and temporal
+evolution of fatalities and their consequences in societies. In Brazil,
+no studies have comprehensively identified fatalities associated with
+all natural hazards and their singularities by decade, region, sex, age,
+and other victim characteristics. This study develops a deep analysis on
+the Brazilian Data Mortality of the Brazilian Ministry of Health, from
+1979 to 2019, identifying the natural hazards that kill the greatest
+number of people in Brazil and its surrounding particularities.
+Lightning is the deadliest natural hazard in Brazil during this period,
+with a gradual decrease in the number of fatal victims. Hydrogeological
+fatalities increases from 2000, and the most fatalities develop from
+2010 to 2019. Despite Brazil being a tropical country affected by severe
+droughts, extreme heat had the lowest number of fatalities, almost
+irrelevant when compared with that of other natural hazards. The period
+from December to March is with the higher number of fatalities, and the
+Southeast region is the most populous regions were the most are fatally
+affected. The number of male victims is double that of female victims,
+of all ages, and unmarried victims died the most. Thus, it is
+fundamental to recognize and make public the knowledge of different
+natural hazards’ impacts on communities and societies, namely people and
+their livelihoods, to evaluate challenges and recognize opportunities to
+reduce natural hazards’ impacts on Brazil.
 
+## Installation
 
-### Introduction
+You can install the development version of brazildatamortality from
+[GitHub](https://github.com/) with:
 
-Worldwide, the level of mortality during and after disasters is characterized to be gender-sensitive to the extent that roles and different responsibilities are associated with women and men in differential and unequal basis. In the case of Brazil, despite of well-known disparities between men and women due to socially constructed differences in attributes and opportunities, there are few information sources and knowledge about gender differential impact and their roles in disasters’ contexts. This research proposes to bring to light whether gender inequalities present themselves as conditions of differential impact and capacities to tackle disasters in Brazil.
+``` r
+# install.packages("devtools")
+devtools::install_github("coutogabriela/brazildatamortality")
+```
 
+## Example
 
-### Research questions
-Important scientific questions regarding disasters in Brazil still require answers: Are disasters gender sensitive in Brazil? Is loss of life due to disaster unequal between men and women?
+This basic example shows the deaths in Brazil by cause and year:
 
+``` r
 
-### Data
-Original source:
+library(brazildatamortality)
+library(dplyr)
+#> 
+#> Attaching package: 'dplyr'
+#> The following objects are masked from 'package:stats':
+#> 
+#>     filter, lag
+#> The following objects are masked from 'package:base':
+#> 
+#>     intersect, setdiff, setequal, union
+library(ggplot2)
 
-World Health Organization
-International Statistic Classification of Diseases and Related Health Problems 9th (ICD9) and 10th revision (ICD10
+get_data() %>%
+    ggplot() +
+    geom_bar(aes(x = death_year, fill = cause)) +
+    xlab("Year") +
+    ylab("Number of fatalities") +
+    labs(fill = "Fatality cause") +
+    ggtitle("Deaths by natural hazard in Brazil")
+```
 
-Based on death certificate that captures more than 50 variables as:
-entity and municipality of registry,
-entity,
-municipality and locality of habitual residence;
-entity, municipality and locality of occurrence of death; sex, age, occupation, schooling, conjugal status, among others
+<img src="man/figures/README-example-1.png" width="100%" />
 
-A dataset containing information of causes of death those caused by exposure to forces of nature
-
-ICD10 
-Deaths due to natural events in Brazil from 1996 to 2019.
-#'
-#' 
-#' CID10 from 1996 to 2019
-#'
-
-
-
-
-### Challenges
-
-#### References
-
-ARYAL, K. Women's Empowerment in Building Disaster Resilient Communities. Asian Journal of Women's Studies, v. 20, n. 1, p. 164-174, 2014.
-
-CEPED. Atlas brasileiro de desastres naturais 1991 a 2012: volume Brasil. Florianópolis: Centro Universitário de Estudos e Pesquisas sobre Desastres, UFSC, 2012.
-
-OFRENEO, R. P. & HEGA, M. D. Women’s solidarity economy initiatives to strengthen food security in response to disasters: Insights from two Philippine case studies. Disaster Prevention and Management, v. 25, n. 2, p. 168-182, 2016.
-
-SADIA, H. et al. Gender-sensitive public health risks and vulnerabilities’ assessment with reference to floods in Pakistan. International Journal of Disaster Risk Reduction, v. 19, p. 47-56, 2016.
+This package contains two sets of data corresponding to fatalities by
+natural hazards (one from 1979 to 1995 and the othre from 1996 to 2019),
+two datasets corresponding to Brazil’s administrative divisions (state
+and town) and a last dataset corresponding to a hexagonal approximation
+of the state division.

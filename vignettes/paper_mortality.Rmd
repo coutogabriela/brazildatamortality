@@ -1,5 +1,5 @@
 ---
-title: "Figures for the paper"
+title: "paper_mortality"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{paper_mortality}
@@ -26,11 +26,18 @@ library(kableExtra)
 
 data_tb <- get_data()
 
+save_figures <- FALSE
+save_dir <- "~/Desktop"
+
+if (save_figures)
+    stopifnot("Directory not found!" = dir.exists(save_dir))
+
 ```
 
 
 
 ```{r data, include=FALSE}
+
 # Deaths by hydro-geological events and extreme temperatures.
 hydrogeo_extemp_tb <- data_tb %>% 
   dplyr::filter(!(cause %in% c("Lightning",
@@ -52,7 +59,7 @@ hydrogeo_extemp_light_tb <-
 
 
 
-## Logaritimic number of deaths by heat, cold, ligthning, storms and earth movement events
+## Moving average (5 years) of fatalities
 
 ```{r fig_log, echo=FALSE, fig.width = 10, fig.height = 7}
 
@@ -118,7 +125,6 @@ fig_03 <-
     ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ggplot2::ylab("Number of fatalities") +
     ggplot2::labs(color = "Fatality cause") +
-    #ggplot2::ggtitle("Moving average (5 years) of fatalities")  + 
     ggplot2::theme_bw() +
     ggplot2::geom_hline(ggplot2::aes(yintercept = my_mean,
                                      group = cause,
@@ -127,14 +133,17 @@ fig_03 <-
                         linetype = "dotted",
                         size = 0.5)
 
-# TODO: Where are we saying this is a five-year mean?
-fig_03
+if (save_figures)
+    ggplot2::ggsave(plot = fig_03,
+                    filename = file.path(save_dir, "fig_03.jpg"),
+                    width = 148.5, 
+                    height = 105,
+                    units = "mm")
 
-ggplot2::ggsave(plot = fig_03,
-                filename = "~/Desktop/fig_03.jpg",
-                width = 148.5, 
-                height = 105,
-                units = "mm")
+# TODO: Where are we saying this is a five-year mean?
+fig_03 +
+    ggplot2::ggtitle("Moving average (5 years) of fatalities")
+
 rm(fig_03)
 rm(mean_tb)
 rm(plot_tb)
@@ -143,8 +152,7 @@ rm(plot_tb)
 
 
 
-## Cumulative number of fatalities due to lightning, hydro-geo and extreme temperature events and total sum
-## Points and lines
+## Cumulative number of fatalities by cause from 1979 to 2019
 
 ```{r fig_cum, echo=FALSE, fig.width = 10, fig.height = 7}
 
@@ -190,26 +198,29 @@ fig_04 <-
     ggplot2::xlab("Year") +
     ggplot2::ylab("Cumulative number of fatalities") +
     ggplot2::labs(color = "Fatality cause") +
-    #ggplot2::ggtitle("Cumulative number of fatalities by cause from 1979 to 2019") +
     ggplot2::scale_color_brewer(palette = "Dark2") +
     ggplot2::theme_bw()
 
-# TODO: Are the points on top of the lines needed?
-fig_04
 
-ggplot2::ggsave(plot = fig_04,
-                filename = "~/Desktop/fig_04.jpg",
-                width = 148.5, 
-                height = 105,
-                units = "mm")
+if (save_figures)
+    ggplot2::ggsave(plot = fig_04,
+                    filename = file.path(save_dir, "fig_04.jpg"), 
+                    width = 148.5, 
+                    height = 105,
+                    units = "mm")
+
+# TODO: Are the points on top of the lines needed?
+fig_04 + 
+    ggplot2::ggtitle(paste("Cumulative number of fatalities by cause from 1979", 
+                           "to 2019"))
+
 rm(fig_04)
 
 ```
 
 
 
-## Deaths due to lightning, storms, earth movement, cold and heat events 
-## Graphic points and lines
+## Death due to forces of nature
 
 ```{r plot_causes, echo=FALSE, fig.width = 7, fig.height = 5}
 
@@ -247,24 +258,26 @@ fig_05 <-
     ggplot2::xlab("Year") +
     ggplot2::ylab("Number of fatalities") +
     ggplot2::labs(color = "Fatality cause") +
-    #ggplot2::ggtitle("Death due to forces of nature") + 
     ggplot2::scale_color_brewer(palette = "Dark2") +
     ggplot2::theme_bw()
 
-fig_05
+if (save_figures)
+    ggplot2::ggsave(plot = fig_05,
+                    filename = file.path(save_dir, "fig_05.jpg"),
+                    width = 148.5, 
+                    height = 105,
+                    units = "mm")
 
-ggplot2::ggsave(plot = fig_05,
-                filename = "~/Desktop/fig_05.jpg",
-                width = 148.5, 
-                height = 105,
-                units = "mm")
-rm(fig_5)
+fig_05 +
+    ggplot2::ggtitle("Death due to forces of nature") 
+
+rm(fig_05)
 
 ```
 
 
 
-## Map by state
+## Map of total number of deaths by state
 
 ```{r map_state_cum, echo=FALSE, fig.width = 10, fig.height = 7}
 
@@ -272,9 +285,6 @@ state_tb <-
     brazildatamortality::state_sf %>% 
     sf::st_set_geometry(NULL) %>% 
     dplyr::mutate(code_state = as.character(code_state))
-
-
-# 3 maps_one category by map
 
 state_data <- 
     hydrogeo_extemp_light_tb %>%
@@ -302,6 +312,13 @@ plot_sf <- merge(state_hex, state_data,
                  by = "abbrev_state",
                  all.x = TRUE)
 
+max_break <- plot_sf %>%
+    sf::st_drop_geometry() %>%
+    pull(fatalities) %>%
+    max()
+my_breaks <- c(1, 5, 50, 500, (max_break - 1))
+names(my_breaks) <- as.character(c(1, 5, 50, 500, max_break))
+
 fig_09 <- 
     plot_sf %>%
     ggplot2::ggplot() +
@@ -320,25 +337,31 @@ fig_09 <-
                    axis.title.y = element_blank() ) +
     ggplot2::scale_fill_gradient(name = "Fatalities", 
                                  trans = "log",
-                                 breaks = c(1, 5, 50, 500),
+                                 breaks = my_breaks,
+                                 labels = names(my_breaks),
                                  low = "green",
                                  high = "red") 
 
-fig_09
+if (save_figures)
+    ggplot2::ggsave(plot = fig_09,
+                    filename = file.path(save_dir, "fig_09.jpg"),
+                    width = 148.5, 
+                    height = 52.5,
+                    units = "mm")
+fig_09 <- 
+    fig_09 +
+    ggplot2::ggtitle("Map of total number of deaths by state")
 
-ggplot2::ggsave(plot = fig_09,
-                filename = "~/Desktop/fig_09.jpg",
-                width = 148.5, 
-                height = 52.5,
-                units = "mm")
+suppressWarnings(print(fig_09))
+
 rm(fig_09)
+rm(my_breaks, max_break,  state_data,  state_tb,  state_hex,  plot_sf)
 
 ```
 
 
 
-## Cumulative n. fatalities by season
-## Bars
+## Number of deaths by season and cause
 
 ```{r fig_season_cum_year, echo=FALSE, fig.width = 10, fig.height = 7}
 
@@ -376,7 +399,6 @@ get_season <- function(x) {
 get_season_name <- function(x) {
   return(names(which(x == season_start)))
 }
-
 fig_07 <- 
     hydrogeo_extemp_light_tb %>%
     dplyr::mutate(cause = dplyr::recode(
@@ -410,23 +432,27 @@ fig_07 <-
     ggplot2::xlab("Season of death") +
     ggplot2::ylab("Number of deaths") +
     ggplot2::labs(fill = "Fatality cause") +
-    #ggplot2::ggtitle("Number of deaths by season and cause") +
     ggplot2::theme_bw()
 
-fig_07
+if (save_figures)
+    ggplot2::ggsave(plot = fig_07,
+                    filename = file.path(save_dir, "fig_07.jpg"),
+                    width = 148.5, 
+                    height = 105,
+                    units = "mm")
 
-ggplot2::ggsave(plot = fig_07,
-                filename = "~/Desktop/fig_07.jpg",
-                width = 148.5, 
-                height = 105,
-                units = "mm")
+fig_07 +
+    ggplot2::ggtitle("Number of deaths by season and cause") 
+
 rm(fig_07)
+rm(year_span, season_start, season_vec, find_season, get_season, 
+   get_season_name)
 
 ```
 
 
-## Number of deaths by month by categories
-## Bars
+
+## Deaths by cause by month
 
 ```{r month, echo=FALSE, fig.width = 10, fig.height = 7}
 
@@ -458,26 +484,25 @@ fig_06 <-
     ggplot2::xlab("Month") +
     ggplot2::ylab("Cumulative number of fatalities") +
     ggplot2::labs(fill = "Fatality cause") +
-    #ggplot2::ggtitle("Deaths by cause by month") + 
     ggplot2::theme_bw()
 
-fig_06
+if (save_figures)
+    ggplot2::ggsave(plot = fig_06,
+                    filename = file.path(save_dir, "fig_06.jpg"),
+                    width = 148.5, 
+                    height = 105,
+                    units = "mm")
 
-ggplot2::ggsave(plot = fig_06,
-                filename = "~/Desktop/fig_06.jpg",
-                width = 148.5, 
-                height = 105,
-                units = "mm")
+fig_06 +
+    ggplot2::ggtitle("Deaths by cause by month") + 
+    
 rm(fig_06)
 
 ```
 
 
 
-## SOCIAL ANALYSIS WITHOUT LIGHTNING
-
-## PIRAMIDE ETÁRIA
-## Number total by sex by age
+## Poplation pyramid by age and sex
 
 ```{r death_by_sex_age, echo=FALSE, fig.width = 10, fig.height = 7}
 
@@ -558,19 +583,24 @@ fig_10 <-
         size = 2
     )
 
-fig_10
+if (save_figures) 
+    ggplot2::ggsave(plot = fig_10,
+                    filename = file.path(save_dir, "fig_10.jpg"),
+                    width = 148.5, 
+                    height = 105,
+                    units = "mm")
 
-ggplot2::ggsave(plot = fig_10,
-                filename = "~/Desktop/fig_10.jpg",
-                width = 148.5, 
-                height = 105,
-                units = "mm")
+fig_10 +
+    ggplot2::ggtitle("Poplation pyramid by age and sex")
+
 rm(fig_10)
+rm(age_start, get_age_interval, age_start_label, plot_tb)
 
 ```
 
 
-## Total number by category
+
+## Population pyramid by fatality cause and sex
 
 ```{r death_by_sex_age_cause, echo=FALSE, fig.width = 10, fig.height = 7}
 
@@ -638,22 +668,24 @@ fig_11 <-
     ggplot2::labs(fill = "Fatality cause") +
     ggplot2::theme_bw()
 
-fig_11
+if (save_figures)
+    ggplot2::ggsave(plot = fig_11, 
+                    filename = file.path(save_dir, "fig_11.jpg"),
+                    width = 148.5, 
+                    height = 105,
+                    units = "mm")
 
-ggplot2::ggsave(plot = fig_11, 
-                filename = "~/Desktop/fig_11.jpg",
-                width = 148.5, 
-                height = 105,
-                units = "mm")
+fig_11 +
+    ggplot2::ggtitle("Population pyramid by fatality cause and sex")
+
 rm(fig_11)
+rm(age_start, get_age_interval, age_start_label, plot_tb)
 
 ```
 
 
 
-## LOCUS
-## SEX, AGE, LOCUS
-## GEOM_BAR GRAPHS
+## Fatalities by locus, age and sex (hydrogeological causes and extreme temperatures)
 
 ```{r death_by_sex_age_locus, echo=FALSE, fig.width = 10, fig.height = 7}
 
@@ -671,7 +703,9 @@ my_interval <- tibble::tibble(id = age_start,
 
 age_start_label <- paste(age_start, c((age_start - 1)[-1], ""), sep = "-")
 
-# ONLY FOR HYDROGEOLOGICAL
+
+
+## NOTE: only for hydrogeological causes
 
 plot_tb <- 
     hydrogeo_extemp_tb %>%
@@ -729,7 +763,6 @@ fig_12_hydrogeo <-
     ggplot2::facet_grid(rows = vars(cause),
                         cols = vars(death_age_interval)) +
     ggplot2::theme(axis.text.x = element_text(angle = 270, hjust = 1)) +
-    #ggplot2::ggtitle("Hydrogeological") +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 270,
                                                        vjust = 0.5, 
                                                        hjust = 1),
@@ -738,19 +771,23 @@ fig_12_hydrogeo <-
     ggplot2::ylab("Number of fatalities") +
     ggplot2::labs(fill = "Fatality locus")
 
-fig_12_hydrogeo
+if (save_figures)
+    ggplot2::ggsave(plot = fig_12_hydrogeo,
+                    filename = file.path(save_dir, "fig_12_hydrogeo.jpg"),
+                    width = 297, 
+                    height = 105,
+                    units = "mm")
 
-ggplot2::ggsave(plot = fig_12_hydrogeo,
-                filename = "~/Desktop/fig_12_hydrogeo.jpg",
-                width = 297, 
-                height = 105,
-                units = "mm")
+fig_12_hydrogeo +
+    ggplot2::ggtitle(paste("Fatalities by locus, age and sex",
+                           "(hydrogeological causes)"))
 
 rm(fig_12_hydrogeo)
+rm(plot_tb)
 
 
 
-## ONLY FOR EXTREME TEMPERATURE
+## NOTE: only for extreme temperature
 
 plot_tb <- 
     hydrogeo_extemp_tb %>%
@@ -817,23 +854,25 @@ fig_12_ext <-
     ggplot2::ylab("Number of fatalities") +
     ggplot2::labs(fill = "Fatality locus")
 
-fig_12_ext
+if (save_figures)
+    ggplot2::ggsave(plot = fig_12_ext,
+                    filename = file.path(save_dir, "fig_12_ext.jpg"),
+                    width = 297, 
+                    height = 105,
+                    units = "mm")
 
-ggplot2::ggsave(plot = fig_12_ext,
-                filename = "~/Desktop/fig_12_ext.jpg",
-                width = 297, 
-                height = 105,
-                units = "mm")
+fig_12_ext +
+    ggplot2::ggtitle(paste("Fatalities by locus, age and sex",
+                           "(extreme temperatures)"))
 
 rm(fig_12_ext)
+rm(age_start, get_age_interval, age_start_label, plot_tb, my_interval)
 
 ```
 
 
 
-## MARITAL
-## SEX, AGE, MARITAL
-## GEOM_BAR GRAPH
+## Fatalities by marital status, age group, and sex (hydrogeological causes and extreme temperatures)
 
 ```{r death_by_sex_age_marital, echo=FALSE, fig.width = 10, fig.height = 7}
 
@@ -853,7 +892,7 @@ age_start_label <- paste(age_start, c((age_start - 1)[-1], ""), sep = "-")
 
 
 
-## MARITAL ONLY FOR HYDROGEOLOGICAL
+## NOTE: only for hydrogeological
 
 plot_tb <- 
     hydrogeo_extemp_tb %>%
@@ -906,7 +945,6 @@ fig_14_hydrogeo <-
     ggplot2::facet_grid(rows = vars(cause),
                         cols = vars(death_age_interval)) +
     ggplot2::theme(axis.text.x = element_text(angle = 270, hjust = 1)) +
-    #ggplot2::ggtitle("Hydrogeological") +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 270,
                                                           vjust = 0.5,
                                                           hjust = 1),
@@ -915,19 +953,23 @@ fig_14_hydrogeo <-
     ggplot2::ylab("Number of fatalities") +
     ggplot2::labs(fill = "Marital status")
 
-fig_14_hydrogeo
+if (save_figures)
+    ggplot2::ggsave(plot = fig_14_hydrogeo,
+                    filename = file.path(save_dir, "fig_14_hydrogeo.jpg"),
+                    width = 297, 
+                    height = 105,
+                    units = "mm")
 
-ggplot2::ggsave(plot = fig_14_hydrogeo,
-                filename = "~/Desktop/fig_14_hydrogeo.jpg",
-                width = 297, 
-                height = 105,
-                units = "mm")
+fig_14_hydrogeo +
+    ggplot2::ggtitle(paste("Fatalities by marital status, age group, and sex", 
+                           "(hydrogeological causes)"))
 
 rm(fig_14_hydrogeo)
+rm(plot_tb)
 
 
 
-## ONLY FOR EXTREME TEMPERATURE
+# NOTE: only for extreme temperature
 
 plot_tb <- 
     hydrogeo_extemp_tb %>%
@@ -979,7 +1021,6 @@ fig_14_ext <-
     ggplot2::facet_grid(rows = vars(cause),
                         cols = vars(death_age_interval)) +
     ggplot2::theme(axis.text.x = element_text(angle = 270, hjust = 1)) +
-    #ggplot2::ggtitle("Extemp") +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 270,
                                                           vjust = 0.5,
                                                           hjust = 1),
@@ -988,15 +1029,19 @@ fig_14_ext <-
     ggplot2::ylab("Number of fatalities") +
     ggplot2::labs(fill = "Marital status")
 
-fig_14_ext
-
-ggplot2::ggsave(plot = fig_14_ext,
-                filename = "~/Desktop/fig_14_ext.jpg",
-                width = 297, 
-                height = 105,
-                units = "mm")
+if (save_figures)
+    ggplot2::ggsave(plot = fig_14_ext,
+                    filename = file.path(save_dir, "fig_14_ext.jpg"),
+                    width = 297, 
+                    height = 105,
+                    units = "mm")
 
 # TODO: What are those ignored? How are different from 'No information'?
+fig_14_ext +
+    ggplot2::ggtitle(paste("Fatalities by marital status, age group, and sex", 
+                           "(extreme temperatures)"))
+
+rm(fig_14_ext)
+rm(age_start, get_age_interval, age_start_label, plot_tb, my_interval)
 
 ```
-

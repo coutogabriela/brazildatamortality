@@ -1,18 +1,17 @@
 Package: brazildatamortality
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
-Authors@R: 
-    person(given = "First",
-           family = "Last",
-           role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
+Title: Natural Hazards Fatalities in Brazil
+Version: 0.0.0.9001
+Authors@R: c(person('Gabriela', 'Couto', role = c('aut'), email = 'couto.a.gabriela@gmail.com', comment = c(ORCID = '0000-0003-3321-4649')),
+             person('Alber', 'Sanchez', role = c('aut', 'cre'), email = 'alber.ipia@inpe.br', comment = c(ORCID = '0000-0001-7966-2880')))
+Maintainer: Alber Sanchez <alber.ipia@inpe.br>
+Description: A dataset and analysis of fatalities in Brazil from 1979 to 2019. 
+    The data and figures presented here correspond to the paper entitled 
+    "Natural  Hazards Fatalities in Brazail, 1979–2019".
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.1
 Depends: R (>= 2.10)
 Imports:
     magrittr
@@ -21,6 +20,7 @@ Suggests:
     ggplot2,
     geobr,
     geogrid,
+    kableExtra,
     knitr,
     lubridate,
     patchwork,
