@@ -121,6 +121,16 @@ fig_03 <-
                                     group = cause,
                                     color = cause)) +
     ggplot2::scale_y_log10() +
+    ggplot2::scale_color_manual(
+        values = c(
+            "#269ED0",
+            "#EB4F51",
+            "#A6C538",
+            "#9E549D",
+            "#FB931F",
+            "#969696"
+        )
+    ) +
     ggplot2::xlab("Year") +
     ggplot2::theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ggplot2::ylab("Number of fatalities") +
@@ -195,10 +205,19 @@ fig_04 <-
                                  group = cause)) +
     ggplot2::geom_point() +
     ggplot2::geom_line() +
+    ggplot2::scale_color_manual(
+        values = c(
+            "#269ED0",
+            "#EB4F51",
+            "#A6C538",
+            "#9E549D",
+            "#FB931F",
+            "#969696"
+        )
+    ) +
     ggplot2::xlab("Year") +
     ggplot2::ylab("Cumulative number of fatalities") +
     ggplot2::labs(color = "Fatality cause") +
-    ggplot2::scale_color_brewer(palette = "Dark2") +
     ggplot2::theme_bw()
 
 
@@ -255,10 +274,19 @@ fig_05 <-
                                  group = cause)) +
     ggplot2::geom_point() +
     ggplot2::geom_line() +
+    ggplot2::scale_color_manual(
+        values = c(
+            "#269ED0",
+            "#EB4F51",
+            "#A6C538",
+            "#9E549D",
+            "#FB931F",
+            "#969696"
+        )
+    ) +
     ggplot2::xlab("Year") +
     ggplot2::ylab("Number of fatalities") +
     ggplot2::labs(color = "Fatality cause") +
-    ggplot2::scale_color_brewer(palette = "Dark2") +
     ggplot2::theme_bw()
 
 if (save_figures)
@@ -291,14 +319,14 @@ state_data <-
     dplyr::mutate(cause = dplyr::recode(
         cause,
         "Lightning"                           = "Lightning",
-        "Earth surface movement and Eruption" = "Hydrogeological",
+        "Earth surface movement and Eruption" = "Hydro-meteorological",
         "Heat"                                = "Extreme temperature",
-        "Cataclismyc and Floods"              = "Hydrogeological",
+        "Cataclismyc and Floods"              = "Hydro-meteorological",
         "Cold"                                = "Extreme temperature",
-        "Landslide"                           = "Hydrogeological",
-        "Cataclismyc"                         = "Hydrogeological",
-        "Flood"                               = "Hydrogeological",
-        "Earthquake"                          = "Hydrogeological"
+        "Landslide"                           = "Hydro-meteorological",
+        "Cataclismyc"                         = "Hydro-meteorological",
+        "Flood"                               = "Hydro-meteorological",
+        "Earthquake"                          = "Hydro-meteorological"
     )) %>%
     dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
     dplyr::left_join(state_tb, by = "code_state") %>% 
@@ -404,14 +432,14 @@ fig_07 <-
     dplyr::mutate(cause = dplyr::recode(
         cause,
         "Lightning"                           = "Lightning",
-        "Earth surface movement and Eruption" = "Hydrogeological",
+        "Earth surface movement and Eruption" = "Hydro-meteorological",
         "Heat"                                = "Extreme temperature",
-        "Cataclismyc and Floods"              = "Hydrogeological",
+        "Cataclismyc and Floods"              = "Hydro-meteorological",
         "Cold"                                = "Extreme temperature",
-        "Landslide"                           = "Hydrogeological",
-        "Cataclismyc"                         = "Hydrogeological", 
-        "Flood"                               = "Hydrogeological",
-        "Earthquake"                          = "Hydrogeological"
+        "Landslide"                           = "Hydro-meteorological",
+        "Cataclismyc"                         = "Hydro-meteorological", 
+        "Flood"                               = "Hydro-meteorological",
+        "Earthquake"                          = "Hydro-meteorological"
     )) %>%
     dplyr::mutate(death_season = purrr::map(death_date, 
                                             find_season),
@@ -461,14 +489,14 @@ fig_06 <-
     dplyr::mutate(cause = dplyr::recode(
         cause,
         "Lightning"                           = "Lightning",
-        "Earth surface movement and Eruption" = "Hydrogeological",
+        "Earth surface movement and Eruption" = "Hydro-meteorological",
         "Heat"                                = "Extreme temperature",
-        "Cataclismyc and Floods"              = "Hydrogeological",
+        "Cataclismyc and Floods"              = "Hydro-meteorological",
         "Cold"                                = "Extreme temperature",
-        "Landslide"                           = "Hydrogeological",
-        "Cataclismyc"                         = "Hydrogeological",
-        "Flood"                               = "Hydrogeological",
-        "Earthquake"                          = "Hydrogeological"
+        "Landslide"                           = "Hydro-meteorological",
+        "Cataclismyc"                         = "Hydro-meteorological",
+        "Flood"                               = "Hydro-meteorological",
+        "Earthquake"                          = "Hydro-meteorological"
     )) %>%
     dplyr::select(cause, death_month) %>%
     tidyr::drop_na() %>%
@@ -502,7 +530,7 @@ rm(fig_06)
 
 
 
-## Poplation pyramid by age and sex
+## Population pyramid by age and sex
 
 ```{r death_by_sex_age, echo=FALSE, fig.width = 10, fig.height = 7}
 
@@ -521,14 +549,14 @@ plot_tb <-
     hydrogeo_extemp_tb %>%
     dplyr::mutate(cause = dplyr::recode(
         cause,
-        "Earth surface movement and Eruption" = "Hydrogeological",
+        "Earth surface movement and Eruption" = "Hydro-meteorological",
         "Heat"                                = "Extreme temperature",
-        "Cataclismyc and Floods"              = "Hydrogeological",
+        "Cataclismyc and Floods"              = "Hydro-meteorological",
         "Cold"                                = "Extreme temperature",
-        "Landslide"                           = "Hydrogeological",
-        "Cataclismyc"                         = "Hydrogeological",
-        "Flood"                               = "Hydrogeological",
-        "Earthquake"                          = "Hydrogeological"
+        "Landslide"                           = "Hydro-meteorological",
+        "Cataclismyc"                         = "Hydro-meteorological",
+        "Flood"                               = "Hydro-meteorological",
+        "Earthquake"                          = "Hydro-meteorological"
     )) %>%
     dplyr::filter(sex %in% c("Female", "Male")) %>% 
     dplyr::mutate(death_age_interval = purrr::map_dbl(age,
@@ -591,7 +619,7 @@ if (save_figures)
                     units = "mm")
 
 fig_10 +
-    ggplot2::ggtitle("Poplation pyramid by age and sex")
+    ggplot2::ggtitle("Population pyramid by age and sex")
 
 rm(fig_10)
 rm(age_start, get_age_interval, age_start_label, plot_tb)
@@ -619,14 +647,14 @@ plot_tb <-
     hydrogeo_extemp_tb %>%
     dplyr::mutate(cause = dplyr::recode(
         cause,
-        "Earth surface movement and Eruption" = "Hydrogeological",
+        "Earth surface movement and Eruption" = "Hydro-meteorological",
         "Heat"                                = "Extreme temperature",
-        "Cataclismyc and Floods"              = "Hydrogeological",
+        "Cataclismyc and Floods"              = "Hydro-meteorological",
         "Cold"                                = "Extreme temperature",
-        "Landslide"                           = "Hydrogeological",
-        "Cataclismyc"                         = "Hydrogeological",
-        "Flood"                               = "Hydrogeological",
-        "Earthquake"                          = "Hydrogeological"
+        "Landslide"                           = "Hydro-meteorological",
+        "Cataclismyc"                         = "Hydro-meteorological",
+        "Flood"                               = "Hydro-meteorological",
+        "Earthquake"                          = "Hydro-meteorological"
     )) %>%
     dplyr::filter(sex %in% c("Female", "Male")) %>% 
     dplyr::mutate(death_age_interval = purrr::map_dbl(age,
@@ -685,7 +713,7 @@ rm(age_start, get_age_interval, age_start_label, plot_tb)
 
 
 
-## Fatalities by locus, age and sex (hydrogeological causes and extreme temperatures)
+## Fatalities by locus, age and sex (hydro-meteorological causes and extreme temperatures)
 
 ```{r death_by_sex_age_locus, echo=FALSE, fig.width = 10, fig.height = 7}
 
@@ -705,22 +733,22 @@ age_start_label <- paste(age_start, c((age_start - 1)[-1], ""), sep = "-")
 
 
 
-## NOTE: only for hydrogeological causes
+## NOTE: only for hydro-meteorological causes
 
 plot_tb <- 
     hydrogeo_extemp_tb %>%
     dplyr::mutate(cause = dplyr::recode(
         cause,
-        "Earth surface movement and Eruption" = "Hydrogeological",
+        "Earth surface movement and Eruption" = "Hydro-meteorological",
         "Heat"                                = "Extreme temperature",
-        "Cataclismyc and Floods"              = "Hydrogeological",
+        "Cataclismyc and Floods"              = "Hydro-meteorological",
         "Cold"                                = "Extreme temperature",
-        "Landslide"                           = "Hydrogeological",
-        "Cataclismyc"                         = "Hydrogeological",
-        "Flood"                               = "Hydrogeological",
-        "Earthquake"                           = "Hydrogeological"
+        "Landslide"                           = "Hydro-meteorological",
+        "Cataclismyc"                         = "Hydro-meteorological",
+        "Flood"                               = "Hydro-meteorological",
+        "Earthquake"                           = "Hydro-meteorological"
     )) %>%
-    dplyr::filter(cause %in% "Hydrogeological") %>%
+    dplyr::filter(cause %in% "Hydro-meteorological") %>%
     dplyr::mutate(locus = dplyr::recode(
         locus,
         "Healh Stablishment"    = "Hospital",
@@ -745,7 +773,15 @@ plot_tb <-
                                                      !!!age_start_label),
                   death_age_interval = factor(death_age_interval,
                                               ordered = TRUE,
-                                              levels = age_start_label))
+                                              levels = age_start_label),
+                  locus = factor(locus,
+                                 ordered = TRUE,
+                                 levels = c("Home", 
+                                            "Hospital", 
+                                            "Public place",
+                                            "Other", 
+                                            "Ignored"))
+    )
 
 plot_tb %>%
     tidyr::pivot_wider(names_from = c(cause, sex, locus), 
@@ -780,7 +816,7 @@ if (save_figures)
 
 fig_12_hydrogeo +
     ggplot2::ggtitle(paste("Fatalities by locus, age and sex",
-                           "(hydrogeological causes)"))
+                           "(hydro-meteorological causes)"))
 
 rm(fig_12_hydrogeo)
 rm(plot_tb)
@@ -793,14 +829,14 @@ plot_tb <-
     hydrogeo_extemp_tb %>%
     dplyr::mutate(cause = dplyr::recode(
         cause,
-        "Earth surface movement and Eruption" = "Hydrogeological",
+        "Earth surface movement and Eruption" = "Hydro-meteorological",
         "Heat"                                = "Extreme temperature",
-        "Cataclismyc and Floods"              = "Hydrogeological",
+        "Cataclismyc and Floods"              = "Hydro-meteorological",
         "Cold"                                = "Extreme temperature",
-        "Landslide"                           = "Hydrogeological",
-        "Cataclismyc"                         = "Hydrogeological",
-        "Flood"                               = "Hydrogeological",
-        "Earthquake"                           = "Hydrogeological"
+        "Landslide"                           = "Hydro-meteorological",
+        "Cataclismyc"                         = "Hydro-meteorological",
+        "Flood"                               = "Hydro-meteorological",
+        "Earthquake"                           = "Hydro-meteorological"
     )) %>%
     dplyr::filter(cause %in% "Extreme temperature") %>%
     dplyr::mutate(locus = dplyr::recode(
@@ -827,7 +863,15 @@ plot_tb <-
                                                      !!!age_start_label),
                   death_age_interval = factor(death_age_interval,
                                               ordered = TRUE,
-                                              levels = age_start_label))
+                                              levels = age_start_label),
+                  locus = factor(locus,
+                                 ordered = TRUE,
+                                 levels = c("Home", 
+                                            "Hospital", 
+                                            "Public place",
+                                            "Other", 
+                                            "Ignored"))
+    )
 
 plot_tb %>%
     tidyr::pivot_wider(names_from = c(cause, sex, locus), 
@@ -845,7 +889,6 @@ fig_12_ext <-
     ggplot2::facet_grid(rows = vars(cause),
                         cols = vars(death_age_interval)) +
     ggplot2::theme(axis.text.x = element_text(angle = 270, hjust = 1)) +
-    #ggplot2::ggtitle("Extreme temperature") +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 270,
                                                        vjust = 0.5, 
                                                        hjust = 1),
@@ -872,7 +915,94 @@ rm(age_start, get_age_interval, age_start_label, plot_tb, my_interval)
 
 
 
-## Fatalities by marital status, age group, and sex (hydrogeological causes and extreme temperatures)
+
+## Fatalities by marital status and sex
+
+```{r death_by_marital_sex, echo=FALSE, fig.width = 10, fig.height = 7}
+
+plot_tb <- 
+    hydrogeo_extemp_tb %>% 
+    dplyr::filter(age >= 15) %>%
+    tidyr::drop_na(marital, sex) %>%
+    dplyr::mutate(marital = dplyr::recode(marital, 
+                                          "No information" = "Ignored",
+                                          "Other"          = "Ignored")) %>%
+    dplyr::group_by(marital, sex) %>%
+    dplyr::summarize(fatalities = dplyr::n()) %>%
+    dplyr::ungroup()
+
+plot_tb <-
+    plot_tb %>%
+    tidyr::pivot_wider(names_from = sex, values_from = fatalities) %>%
+    dplyr::mutate(
+        Female_pc = round(100 * Female / (Female + Male), digits = 1),
+        Male_pc = round(  100 * Male   / (Female + Male), digits = 1)
+    ) %>%
+    dplyr::select(marital, Female = Female_pc, Male = Male_pc) %>%
+    tidyr::pivot_longer(cols = c(Female, Male), 
+                        names_to = "sex", values_to = "percentage") %>%
+    dplyr::right_join(y = plot_tb, by = c("sex", "marital")) %>%
+    dplyr::mutate(text_pos = fatalities, 
+                  marital = factor(x =  marital,
+                                   levels = c(
+                                       "Single",                           
+                                       "Married",  
+                                       "Separated",  
+                                       "Widow", 
+                                       "Ignored"),
+                                   ordered = TRUE)
+                  )
+
+plot_tb %>%
+    kableExtra::kable()
+
+fig_13 <- 
+    plot_tb %>%
+    ggplot2::ggplot() +
+    ggplot2::geom_bar(
+        ggplot2::aes(x = sex, 
+                     y = fatalities, 
+                     fill = marital),
+        stat = "identity",
+        position = "dodge"
+    ) + 
+    ggplot2::scale_fill_brewer(palette = "Dark2") +
+    ggplot2::theme_bw() +
+    ggplot2::xlab("Sex") +
+    ggplot2::ylab("Number of fatalities") +
+    ggplot2::labs(fill = "Marital status")
+    # ggplot2::geom_text(
+    #     ggplot2::aes(label = paste0(percentage, "%"),
+    #               x = sex,
+    #               y = text_pos),
+    #     size = 2,
+    #     vjust = -0.5,  
+    #     position = position_dodge(width = .9)
+    # ) 
+
+if (save_figures)
+    ggplot2::ggsave(plot = fig_13,
+                    filename = file.path(save_dir, "fig_13.jpg"),
+                    width = 297, 
+                    height = 105,
+                    units = "mm")
+
+fig_13 +
+    ggplot2::ggtitle("Fatalities by marital status and sex")
+
+rm(fig_13)
+rm(plot_tb)
+
+
+
+```
+
+
+
+
+
+
+## Fatalities by marital status, age group, and sex (hydro-meteorological causes and extreme temperatures)
 
 ```{r death_by_sex_age_marital, echo=FALSE, fig.width = 10, fig.height = 7}
 
@@ -892,22 +1022,22 @@ age_start_label <- paste(age_start, c((age_start - 1)[-1], ""), sep = "-")
 
 
 
-## NOTE: only for hydrogeological
+## NOTE: only for hydro-meteorological
 
 plot_tb <- 
     hydrogeo_extemp_tb %>%
     dplyr::mutate(cause = dplyr::recode(
         cause,
-        "Earth surface movement and Eruption" = "Hydrogeological",
+        "Earth surface movement and Eruption" = "Hydro-meteorological",
         "Heat"                                = "Extreme temperature",
-        "Cataclismyc and Floods"              = "Hydrogeological",
+        "Cataclismyc and Floods"              = "Hydro-meteorological",
         "Cold"                                = "Extreme temperature",
-        "Landslide"                           = "Hydrogeological",
-        "Cataclismyc"                         = "Hydrogeological", 
-        "Flood"                               = "Hydrogeological",
-        "Earthquake"                          = "Hydrogeological"
+        "Landslide"                           = "Hydro-meteorological",
+        "Cataclismyc"                         = "Hydro-meteorological", 
+        "Flood"                               = "Hydro-meteorological",
+        "Earthquake"                          = "Hydro-meteorological"
     )) %>%
-    dplyr::filter(cause == "Hydrogeological",
+    dplyr::filter(cause == "Hydro-meteorological",
                   sex %in% c("Female", "Male")) %>%
     tidyr::drop_na(marital) %>%
     dplyr::mutate(marital = dplyr::recode(marital, 
@@ -919,14 +1049,23 @@ plot_tb <-
     dplyr::summarise(fatalities = dplyr::n()) %>%
     dplyr::ungroup() %>%
     dplyr::arrange(death_age_interval) %>%
-    # TODO: People dying under 15 years old are ignored!
+    # NOTE: People dying under 15 years old are ignored!
     dplyr::mutate(death_age_interval = dplyr::recode(death_age_interval,
                                                      !!!age_start_label,
                                                      .default = NA_character_
-                                                     ),
-                  death_age_interval = factor(death_age_interval,
-                                              ordered = TRUE,
-                                              levels = age_start_label)) %>%
+    ),
+    death_age_interval = factor(death_age_interval,
+                                ordered = TRUE,
+                                levels = age_start_label),
+    marital = factor(x =  marital,
+                     levels = c(
+                         "Single",                           
+                         "Married",  
+                         "Separated",  
+                         "Widow", 
+                         "Ignored"),
+                     ordered = TRUE)
+    ) %>%
     tidyr::drop_na(death_age_interval)
 
 plot_tb %>%
@@ -941,7 +1080,7 @@ fig_14_hydrogeo <-
                                  y = fatalities,
                                  fill = marital)) +
     ggplot2::geom_bar(stat = 'identity') +
-    ggplot2::scale_fill_brewer(palette = "BrBG") +
+    ggplot2::scale_fill_brewer(palette = "Dark2") +
     ggplot2::facet_grid(rows = vars(cause),
                         cols = vars(death_age_interval)) +
     ggplot2::theme(axis.text.x = element_text(angle = 270, hjust = 1)) +
@@ -962,7 +1101,7 @@ if (save_figures)
 
 fig_14_hydrogeo +
     ggplot2::ggtitle(paste("Fatalities by marital status, age group, and sex", 
-                           "(hydrogeological causes)"))
+                           "(hydro-meteorological causes)"))
 
 rm(fig_14_hydrogeo)
 rm(plot_tb)
@@ -975,14 +1114,14 @@ plot_tb <-
     hydrogeo_extemp_tb %>%
     dplyr::mutate(cause = dplyr::recode(
         cause,
-        "Earth surface movement and Eruption" = "Hydrogeological",
+        "Earth surface movement and Eruption" = "Hydro-meteorological",
         "Heat"                                = "Extreme temperature",
-        "Cataclismyc and Floods"              = "Hydrogeological",
+        "Cataclismyc and Floods"              = "Hydro-meteorological",
         "Cold"                                = "Extreme temperature",
-        "Landslide"                           = "Hydrogeological",
-        "Cataclismyc"                         = "Hydrogeological",
-        "Flood"                               = "Hydrogeological",
-        "Earthquake"                          = "Hydrogeological"
+        "Landslide"                           = "Hydro-meteorological",
+        "Cataclismyc"                         = "Hydro-meteorological",
+        "Flood"                               = "Hydro-meteorological",
+        "Earthquake"                          = "Hydro-meteorological"
     )) %>%
     dplyr::filter(cause == "Extreme temperature",
                   marital != "Other",
@@ -1002,7 +1141,16 @@ plot_tb <-
                                                      .default = NA_character_),
                   death_age_interval = factor(death_age_interval,
                                               ordered = TRUE,
-                                              levels = age_start_label)) %>%
+                                              levels = age_start_label),
+                  marital = factor(x =  marital,
+                                   levels = c(
+                                       "Single",                           
+                                       "Married",  
+                                       "Separated",  
+                                       "Widow", 
+                                       "Ignored"),
+                                   ordered = TRUE)
+    ) %>%
     tidyr::drop_na(death_age_interval)
 
 plot_tb %>%
@@ -1017,7 +1165,7 @@ fig_14_ext <-
                                  y = fatalities,
                                  fill = marital)) +
     ggplot2::geom_bar(stat = 'identity') +
-    ggplot2::scale_fill_brewer(palette = "BrBG") +
+    ggplot2::scale_fill_brewer(palette = "Dark2") +
     ggplot2::facet_grid(rows = vars(cause),
                         cols = vars(death_age_interval)) +
     ggplot2::theme(axis.text.x = element_text(angle = 270, hjust = 1)) +
