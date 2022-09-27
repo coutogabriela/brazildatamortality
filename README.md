@@ -7,7 +7,7 @@
 <!-- badges: end -->
 
 This package contains both the data and the figures presented in the
-paper “Natural Hazards Fatalities in Brazail, 1979–2019”. Below is the
+paper “Natural Hazards Fatalities in Brazil, 1979–2019”. Below is the
 abstract of the aforementioned paper.
 
 The impact of natural hazards on nations and societies is a global
@@ -74,8 +74,11 @@ get_data() %>%
 
 <img src="man/figures/README-example-1.png" width="100%" />
 
-This package contains two sets of data corresponding to fatalities by
-natural hazards (one from 1979 to 1995 and the othre from 1996 to 2019),
-two datasets corresponding to Brazil’s administrative divisions (state
-and town) and a last dataset corresponding to a hexagonal approximation
-of the state division.
+This package contains:
+
+-   two datasets corresponding to fatalities by natural hazards (one
+    from 1979 to 1995 and the other from 1996 to 2019).
+-   two datasets corresponding to Brazil’s administrative divisions
+    (state and town)
+-   one dataset corresponding to a hexagonal approximation of the
+    Brazilian state division.
