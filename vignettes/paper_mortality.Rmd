@@ -55,6 +55,10 @@ hydrogeo_extemp_light_tb <-
                                  "Other"))) %>%
     dplyr::filter(!(death_city %in% c("310900", "314000")))
 
+if (save_figures) 
+    readr::write_csv(hydrogeo_extemp_light_tb,
+                     file = file.path(save_dir, "hydrogeo_extemp_light_tb.csv"))
+
 ```
 
 
