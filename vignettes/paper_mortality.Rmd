@@ -55,6 +55,10 @@ hydrogeo_extemp_light_tb <-
                                  "Other"))) %>%
     dplyr::filter(!(death_city %in% c("310900", "314000")))
 
+if (save_figures) 
+    readr::write_csv(hydrogeo_extemp_light_tb,
+                     file = file.path(save_dir, "hydrogeo_extemp_light_tb.csv"))
+
 ```
 
 
@@ -958,27 +962,19 @@ plot_tb %>%
 
 fig_13 <- 
     plot_tb %>%
-    ggplot2::ggplot() +
-    ggplot2::geom_bar(
-        ggplot2::aes(x = sex, 
-                     y = fatalities, 
-                     fill = marital),
-        stat = "identity",
-        position = "dodge"
-    ) + 
+    ggplot2::ggplot(ggplot2::aes(x = sex, 
+                                 y = fatalities, 
+                                 fill = marital,
+                                 label = paste0(percentage, "%"))) +
+    ggplot2::geom_col(position = "dodge") + 
     ggplot2::scale_fill_brewer(palette = "Dark2") +
     ggplot2::theme_bw() +
     ggplot2::xlab("Sex") +
     ggplot2::ylab("Number of fatalities") +
-    ggplot2::labs(fill = "Marital status")
-    # ggplot2::geom_text(
-    #     ggplot2::aes(label = paste0(percentage, "%"),
-    #               x = sex,
-    #               y = text_pos),
-    #     size = 2,
-    #     vjust = -0.5,  
-    #     position = position_dodge(width = .9)
-    # ) 
+    ggplot2::labs(fill = "Marital status")  +
+    ggplot2::geom_text(position = ggplot2::position_dodge(width = .9),  
+                       vjust = -0.5, 
+                       size = 3) 
 
 if (save_figures)
     ggplot2::ggsave(plot = fig_13,
