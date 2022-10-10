@@ -27,7 +27,7 @@ library(kableExtra)
 data_tb <- get_data()
 
 save_figures <- FALSE
-save_dir <- "~/Desktop"
+save_dir <- "~/Desktop/brazilianmortality"
 
 if (save_figures)
     stopifnot("Directory not found!" = dir.exists(save_dir))
@@ -55,10 +55,6 @@ hydrogeo_extemp_light_tb <-
                                  "Other"))) %>%
     dplyr::filter(!(death_city %in% c("310900", "314000")))
 
-if (save_figures) 
-    readr::write_csv(hydrogeo_extemp_light_tb,
-                     file = file.path(save_dir, "hydrogeo_extemp_light_tb.csv"))
-
 ```
 
 
@@ -74,11 +70,11 @@ plot_tb <-
         "Lightning"                           = "Lightning",
         "Earth surface movement and Eruption" = "Landslide",
         "Heat"                                = "Heat",
-        "Cataclismyc and Floods"              = "Storm",
+        "Cataclismyc and Floods"              = "Storm & flood",
         "Cold"                                = "Cold",
         "Landslide"                           = "Landslide",
-        "Cataclismyc"                         = "Storm",                       
-        "Flood"                               = "Storm",
+        "Cataclismyc"                         = "Storm & flood",
+        "Flood"                               = "Storm & flood",
         "Earthquake"                          = "Landslide"
     )) %>%
     dplyr::group_by(death_year, cause) %>%
@@ -154,7 +150,6 @@ if (save_figures)
                     height = 105,
                     units = "mm")
 
-# TODO: Where are we saying this is a five-year mean?
 fig_03 +
     ggplot2::ggtitle("Moving average (5 years) of fatalities")
 
@@ -177,11 +172,11 @@ fig_04 <-
         "Lightning"                           = "Lightning",
         "Earth surface movement and Eruption" = "Landslide",
         "Heat"                                = "Heat",
-        "Cataclismyc and Floods"              = "Storm",
+        "Cataclismyc and Floods"              = "Storm & flood",
         "Cold"                                = "Cold",
         "Landslide"                           = "Landslide",
-        "Cataclismyc"                         = "Storm",                       
-        "Flood"                               = "Storm",
+        "Cataclismyc"                         = "Storm & flood",
+        "Flood"                               = "Storm & flood",
         "Earthquake"                          = "Landslide"
     )) %>%
     dplyr::group_by(death_year, cause) %>%
@@ -207,7 +202,6 @@ fig_04 <-
                                  y = cumsum,
                                  color = cause,
                                  group = cause)) +
-    ggplot2::geom_point() +
     ggplot2::geom_line() +
     ggplot2::scale_color_manual(
         values = c(
@@ -232,7 +226,6 @@ if (save_figures)
                     height = 105,
                     units = "mm")
 
-# TODO: Are the points on top of the lines needed?
 fig_04 + 
     ggplot2::ggtitle(paste("Cumulative number of fatalities by cause from 1979", 
                            "to 2019"))
@@ -254,11 +247,11 @@ fig_05 <-
         "Lightning"                           = "Lightning",
         "Earth surface movement and Eruption" = "Landslide",
         "Heat"                                = "Heat",
-        "Cataclismyc and Floods"              = "Storm",
+        "Cataclismyc and Floods"              = "Storm & flood",
         "Cold"                                = "Cold",
         "Landslide"                           = "Landslide",
-        "Cataclismyc"                         = "Storm",                       
-        "Flood"                               = "Storm",
+        "Cataclismyc"                         = "Storm & flood",
+        "Flood"                               = "Storm & flood",
         "Earthquake"                          = "Landslide"
     )) %>%
     dplyr::group_by(cause, death_year) %>%
@@ -268,7 +261,7 @@ fig_05 <-
     dplyr::filter(cause %in% c("Lightning",
                                "Landslide",
                                "Heat",
-                               "Storm",
+                               "Storm & flood",
                                "Cold",
                                "Landslide")) %>%             
     dplyr::filter(!is.na(cause), !is.na(death_year)) %>%
@@ -276,7 +269,6 @@ fig_05 <-
                                  y = fatalities,
                                  color = cause,
                                  group = cause)) +
-    ggplot2::geom_point() +
     ggplot2::geom_line() +
     ggplot2::scale_color_manual(
         values = c(
@@ -337,6 +329,16 @@ state_data <-
     dplyr::group_by(abbrev_state, cause) %>%
     dplyr::summarize(fatalities = dplyr::n()) %>%
     dplyr::ungroup()
+
+
+# NOTE: Prepare table for Gabriela.
+if (save_figures)
+    hydrogeo_extemp_light_tb %>%
+    dplyr::mutate(code_state = stringr::str_sub(death_city, 1, 2)) %>% 
+    dplyr::left_join(state_tb, by = "code_state") %>% 
+    dplyr::group_by(abbrev_state, cause) %>%  
+    readr::write_csv2(file = file.path(save_dir, 
+                                       "hydrogeo_extemp_light_tb.cv2"))
 
 state_hex <- brazildatamortality::state_hex
  
@@ -703,7 +705,7 @@ fig_11 <-
 if (save_figures)
     ggplot2::ggsave(plot = fig_11, 
                     filename = file.path(save_dir, "fig_11.jpg"),
-                    width = 148.5, 
+                    width = 168.5, # 148.5, 
                     height = 105,
                     units = "mm")
 
@@ -1180,7 +1182,6 @@ if (save_figures)
                     height = 105,
                     units = "mm")
 
-# TODO: What are those ignored? How are different from 'No information'?
 fig_14_ext +
     ggplot2::ggtitle(paste("Fatalities by marital status, age group, and sex", 
                            "(extreme temperatures)"))
