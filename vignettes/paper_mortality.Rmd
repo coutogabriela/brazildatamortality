@@ -9,12 +9,18 @@ editor_options:
   chunk_output_type: console
 ---
 
+
+
+# Figures of the paper "Natural Hazards Fatalities in Brazil, 1979–2019" 
+
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
 ```
+
+
 
 ```{r setup, include=FALSE}
 
@@ -27,7 +33,7 @@ library(kableExtra)
 data_tb <- get_data()
 
 save_figures <- FALSE
-save_dir <- "~/Desktop/brazilianmortality"
+save_dir <- "~/Desktop/brazilianmortality/paper_mortality"
 
 if (save_figures)
     stopifnot("Directory not found!" = dir.exists(save_dir))
@@ -338,7 +344,7 @@ if (save_figures)
     dplyr::left_join(state_tb, by = "code_state") %>% 
     dplyr::group_by(abbrev_state, cause) %>%  
     readr::write_csv2(file = file.path(save_dir, 
-                                       "hydrogeo_extemp_light_tb.cv2"))
+                                       "hydrogeo_extemp_light_tb.csv"))
 
 state_hex <- brazildatamortality::state_hex
  
@@ -414,6 +420,7 @@ season_start <- c("Jan-Mar" = "12-21",
 
 season_vec <- year_span %>% 
   tidyr::expand_grid(season_start) %>%
+  magrittr::set_colnames(c("year_span", "season_start")) %>%
   dplyr::mutate(season_start = paste(year_span, season_start, sep = "-")) %>% 
   dplyr::mutate(season_start = lubridate::as_date(season_start)) %>%
   arrange(season_start) %>%
