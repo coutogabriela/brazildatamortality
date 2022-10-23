@@ -413,10 +413,14 @@ year_span <-
 year_span <- year_span + c(-1, 1)
 year_span <- year_span[1]:year_span[2]
 
-season_start <- c("Jan-Mar" = "12-21",
-                  "Apr-Jun" = "03-20",
-                  "Jul-Sep" = "06-21",
-                  "Oct-Dec" = "09-22")
+# season_start <- c("Jan-Mar" = "12-21",
+#                   "Apr-Jun" = "03-20",
+#                   "Jul-Sep" = "06-21",
+#                   "Oct-Dec" = "09-22")
+season_start <- c("Summer" = "12-21",
+                  "Autum" = "03-20",
+                  "Winter" = "06-21",
+                  "Spring" = "09-22")
 
 season_vec <- year_span %>% 
   tidyr::expand_grid(season_start) %>%
